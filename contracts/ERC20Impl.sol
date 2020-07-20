@@ -4,7 +4,7 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./storage.sol";
+import "./Storage.sol";
 
 /**
  * @notice Implemetation of ERC20 interfaces.
@@ -92,7 +92,7 @@ contract ERC20Impl is Storage, IERC20 {
         emit Transfer(sender, recipient, amount);
     }
 
-        function _mint(address account, uint256 amount) internal virtual {
+    function _mint(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: mint to the zero address");
 
         _totalSupply = _totalSupply.add(amount);

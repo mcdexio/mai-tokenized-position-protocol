@@ -1,29 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
 
+library LibTypes {
+    enum Status {NORMAL, EMERGENCY, SETTLED}
+}
+
 interface IPerpetual {
+    function markPrice() external returns (uint256);
     function status() external view returns (LibTypes.Status);
+    function isSafeWithPrice(address trader, uint256 currentMarkPrice) external returns (bool);
+    function isIMSafeWithPrice(address trader, uint256 currentMarkPrice) external returns (bool);
+    function collateral() external returns (address);
+    function depositFor(address trader, uint256 rawAmount) external payable;
+    function withdrawFor(address payable trader, uint256 rawAmount) external;
+    function tradePosition(
+        address taker,
+        address maker,
+        LibTypes.Side side,
+        uint256 price,
+        uint256 amount
+    ) external returns (uint256, uint256);
     function settle() external;
 }
-
-interface IAMM {
-
-    function depositAndSell(
-        uint256 depositAmount,
-        uint256 tradeAmount,
-        uint256 limitPrice,
-        uint256 deadline
-    ) external payable;
-
-    function buyAndWithdraw(
-        uint256 tradeAmount,
-        uint256 limitPrice,
-        uint256 deadline,
-        uint256 withdrawAmount
-    ) external;
-}
-
-
 
 contract Storage {
     // ERC20
@@ -33,7 +31,9 @@ contract Storage {
     mapping(address => uint256) internal _balances;
     mapping(address => mapping (address => uint256)) internal _allowances;
 
-    // perpetual context
+    // Perpetual context
     address internal _perpetual;
-    address internal _amm;
+
+    // Scaler helps to convert decimals
+    uint256 internal _collateralScaler;
 }
