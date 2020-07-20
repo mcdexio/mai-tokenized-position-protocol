@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
 
-import "@openzeppelin/openzeppelin-upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts/utils/SafeCast.sol";
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -18,6 +19,7 @@ contract TokenizerImplV1 is
     Initializable
 {
     using LibPerpetualMathUnsigned for uint256;
+    using SafeCast for int256;
     using SafeERC20 for IERC20;
 
     // Available decimals should be within [0, 18]
@@ -42,47 +44,54 @@ contract TokenizerImplV1 is
         // This statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
         // scaler = (_decimals == MAX_DECIMALS ? 1 : 10**(MAX_DECIMALS.sub(_decimals))).toInt256();
         // But this will not.
-        require(_decimals <= MAX_DECIMALS, "decimals out of range");
+        require(collateralDecimals <= MAX_DECIMALS, "decimals out of range");
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
     }
 
     function mint(uint256 amount)
-        external
+        public
         virtual
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
         address takerAddress = msg.sender;
-        address makerAddress = address(self);
-        uint256 markPrice = perpetual.markPrice();
+        address makerAddress = address(this);
 
+        // price and collateral required
         uint256 collateral;
+        uint256 price;
         if (totalSupply() > 0) {
+            uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
+            require(marginBalance > 0, "no margin balance");
             // collateral = marginBalance * amount / totalSupply
-            uint256 marginBalance = perpetual.marginBalance(makerAddress);
-            collateral = marginBalance.wfrac(amount, totalSupply());
+            collateral = marginBalance.wfrac(amount, totalSupply()) + 1;
+            price = marginBalance.wdiv(totalSupply());
         } else {
+            uint256 markPrice = _perpetual.markPrice();
+            require(markPrice > 0, "zero markPrice");
             // collateral = markPrice * amount
             collateral = markPrice.wmul(amount) + 1;
+            price = markPrice;
         }
-        perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
+        _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
 
         // trade
-        (uint256 takerOpened, ) = perpetual.tradePosition(
-            takerAddress
+        require(price > 0, "zero price");
+        (uint256 takerOpened, ) = _perpetual.tradePosition(
+            takerAddress,
             makerAddress,
             LibTypes.Side.SHORT, // taker side
-            markPrice,
+            price,
             amount
         );
 
         // is safe
         if (takerOpened > 0) {
-            require(perpetual.isIMSafe(takerAddress), "taker IM unsafe");
+            require(_perpetual.isIMSafe(takerAddress), "taker IM unsafe");
         } else {
-            require(perpetual.isSafe(takerAddress), "taker unsafe");
+            require(_perpetual.isSafe(takerAddress), "taker unsafe");
         }
-        require(perpetual.isSafe(makerAddress), "broker unsafe");
+        require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
         ERC20Impl._mint(takerAddress, amount);
@@ -90,58 +99,73 @@ contract TokenizerImplV1 is
     }
 
     function burn(uint256 amount)
-        external
+        public
         virtual
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
         address takerAddress = msg.sender;
-        address makerAddress = address(self);
-        uint256 markPrice = perpetual.markPrice();
+        address makerAddress = address(this);
+
+        // price and collateral returned
+        uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
+        require(marginBalance > 0, "no margin balance");
+        // collateral = marginBalance * amount / totalSupply
+        require(totalSupply() > 0, "zero supply");
+        uint256 collateral = marginBalance.wfrac(amount, totalSupply());
+        uint256 price = marginBalance.wdiv(totalSupply());
         
         // trade
-        (uint256 takerOpened, ) = perpetual.tradePosition(
-            takerAddress
+        require(price > 0, "zero price");
+        (uint256 takerOpened, ) = _perpetual.tradePosition(
+            takerAddress,
             makerAddress,
             LibTypes.Side.LONG, // taker side
-            markPrice,
+            price,
             amount
         );
-
-        // collateral = marginBalance * amount / totalSupply
-        uint256 marginBalance = perpetual.marginBalance(makerAddress);
-        uint256 collateral = marginBalance.wfrac(amount, totalSupply());
-        perpetual.transferCashBalance(makerAddress, takerAddress, collateral);
+        _perpetual.transferCashBalance(makerAddress, takerAddress, collateral);
 
         // is safe
         if (takerOpened > 0) {
-            require(perpetual.isIMSafe(takerAddress), "taker IM unsafe");
+            require(_perpetual.isIMSafe(takerAddress), "taker IM unsafe");
         } else {
-            require(perpetual.isSafe(takerAddress), "taker unsafe");
+            require(_perpetual.isSafe(takerAddress), "taker unsafe");
         }
-        require(perpetual.isSafe(makerAddress), "broker unsafe");
+        require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
         ERC20Impl._burn(takerAddress, amount);
-        emit Redeem(takerAddress, amount);
+        emit Burn(takerAddress, amount);
     }
 
     function settle()
-        external
+        public
         virtual
         override
     {
-        require(_perpetual.status() == SETTLED, "wrong perpetual status");
+        require(_perpetual.status() == LibTypes.Status.SETTLED, "wrong perpetual status");
         _perpetual.settle();
-        address takerAddress = msg.sender;
-        uint256 markPrice = perpetual.markPrice();
+        address payable takerAddress = msg.sender;
+        address makerAddress = address(this);
         uint256 amount = balanceOf(takerAddress);
-
-        // collateral = my collateral * amount / totalSupply
-        uint256 collateral = amount.wfrac(amount, totalSupply());
-        uint256 rawCollateral = collateral.div(_collateralScaler);
+        
+        // collateral returned
         IERC20 ctk = IERC20(_perpetual.collateral());
-        if (address(collateral) != address(0)) {
+        uint256 marginBalance;
+        if (address(ctk) != address(0)) {
+            // erc20
+            marginBalance = ctk.balanceOf(makerAddress);
+        } else {
+            // eth
+            marginBalance = makerAddress.balance;
+        }
+        require(marginBalance > 0, "no margin balance");
+        // collateral = my collateral * amount / totalSupply
+        require(totalSupply() > 0, "zero supply");
+        uint256 collateral = marginBalance.wfrac(amount, totalSupply());
+        uint256 rawCollateral = collateral.div(_collateralScaler);
+        if (address(ctk) != address(0)) {
             // erc20
             ctk.safeTransfer(takerAddress, rawCollateral);
         } else {
@@ -150,8 +174,8 @@ contract TokenizerImplV1 is
         }
 
         // burn
-        ERC20Impl._burn(msg.sender, amount);
-        emit Redeem(msg.sender, amount);
+        ERC20Impl._burn(takerAddress, amount);
+        emit Burn(takerAddress, amount);
     }
 
     /**
@@ -168,9 +192,11 @@ contract TokenizerImplV1 is
     )
         public
         payable
+        virtual
+        override
     {
         if (depositAmount > 0) {
-            perpetual.depositFor.value(msg.value)(msg.sender, depositAmount);
+            _perpetual.depositFor{value: msg.value}(msg.sender, depositAmount);
         }
         if (mintAmount > 0) {
             mint(mintAmount);
@@ -190,13 +216,14 @@ contract TokenizerImplV1 is
         uint256 withdrawAmount
     )
         public
-        payable
+        virtual
+        override
     {
         if (burnAmount > 0) {
             burn(burnAmount);
         }
         if (withdrawAmount > 0) {
-            perpetual.withdrawFor(msg.sender, withdrawAmount);
+            _perpetual.withdrawFor(msg.sender, withdrawAmount);
         }
     }
 }

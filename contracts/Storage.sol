@@ -1,18 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
 
+// see https://github.com/mcdexio/mai-protocol-v2/blob/master/contracts/lib/LibTypes.sol
 library LibTypes {
+    enum Side {FLAT, SHORT, LONG}
     enum Status {NORMAL, EMERGENCY, SETTLED}
 }
 
+// see https://github.com/mcdexio/mai-protocol-v2/blob/master/contracts/interface/IPerpetual.sol
 interface IPerpetual {
     function markPrice() external returns (uint256);
     function status() external view returns (LibTypes.Status);
+    function marginBalance(address trader) external returns (int256);
     function isSafe(address trader) external returns (bool);
     function isIMSafe(address trader) external returns (bool);
-    function collateral() external returns (address);
+    function collateral() external view returns (address);
     function depositFor(address trader, uint256 rawAmount) external payable;
     function withdrawFor(address payable trader, uint256 rawAmount) external;
+    function transferCashBalance(
+        address from,
+        address to,
+        uint256 amount
+    ) external;
     function tradePosition(
         address taker,
         address maker,
@@ -23,6 +32,7 @@ interface IPerpetual {
     function settle() external;
 }
 
+// Tokenizer storage
 contract Storage {
     // ERC20
     string internal _name;
@@ -32,7 +42,7 @@ contract Storage {
     mapping(address => mapping (address => uint256)) internal _allowances;
 
     // Perpetual context
-    address internal _perpetual;
+    IPerpetual internal _perpetual;
 
     // Scaler helps to convert decimals
     uint256 internal _collateralScaler;
