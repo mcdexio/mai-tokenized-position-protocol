@@ -8,8 +8,8 @@ library LibTypes {
 interface IPerpetual {
     function markPrice() external returns (uint256);
     function status() external view returns (LibTypes.Status);
-    function isSafeWithPrice(address trader, uint256 currentMarkPrice) external returns (bool);
-    function isIMSafeWithPrice(address trader, uint256 currentMarkPrice) external returns (bool);
+    function isSafe(address trader) external returns (bool);
+    function isIMSafe(address trader) external returns (bool);
     function collateral() external returns (address);
     function depositFor(address trader, uint256 rawAmount) external payable;
     function withdrawFor(address payable trader, uint256 rawAmount) external;

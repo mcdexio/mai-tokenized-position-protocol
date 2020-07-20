@@ -56,8 +56,15 @@ contract TokenizerImplV1 is
         address makerAddress = address(self);
         uint256 markPrice = perpetual.markPrice();
 
-        // collateral = markPrice * amount
-        uint256 collateral = markPrice.wmul(amount) + 1;
+        uint256 collateral;
+        if (totalSupply() > 0) {
+            // collateral = marginBalance * amount / totalSupply
+            uint256 marginBalance = perpetual.marginBalance(makerAddress);
+            collateral = marginBalance.wfrac(amount, totalSupply());
+        } else {
+            // collateral = markPrice * amount
+            collateral = markPrice.wmul(amount) + 1;
+        }
         perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
 
         // trade
@@ -71,11 +78,11 @@ contract TokenizerImplV1 is
 
         // is safe
         if (takerOpened > 0) {
-            require(perpetual.isIMSafeWithPrice(takerAddress, markPrice), "taker IM unsafe");
+            require(perpetual.isIMSafe(takerAddress), "taker IM unsafe");
         } else {
-            require(perpetual.isSafeWithPrice(takerAddress, markPrice), "taker unsafe");
+            require(perpetual.isSafe(takerAddress), "taker unsafe");
         }
-        require(perpetual.isSafeWithPrice(makerAddress, markPrice), "broker unsafe");
+        require(perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
         ERC20Impl._mint(takerAddress, amount);
@@ -108,11 +115,11 @@ contract TokenizerImplV1 is
 
         // is safe
         if (takerOpened > 0) {
-            require(perpetual.isIMSafeWithPrice(takerAddress, markPrice), "taker IM unsafe");
+            require(perpetual.isIMSafe(takerAddress), "taker IM unsafe");
         } else {
-            require(perpetual.isSafeWithPrice(takerAddress, markPrice), "taker unsafe");
+            require(perpetual.isSafe(takerAddress), "taker unsafe");
         }
-        require(perpetual.isSafeWithPrice(makerAddress, markPrice), "broker unsafe");
+        require(perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
         ERC20Impl._burn(takerAddress, amount);
