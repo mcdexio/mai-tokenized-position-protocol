@@ -9,12 +9,13 @@ library LibTypes {
 
 // see https://github.com/mcdexio/mai-protocol-v2/blob/master/contracts/interface/IPerpetual.sol
 interface IPerpetual {
+    function collateral() external view returns (address);
     function markPrice() external returns (uint256);
     function status() external view returns (LibTypes.Status);
     function marginBalance(address trader) external returns (int256);
     function isSafe(address trader) external returns (bool);
     function isIMSafe(address trader) external returns (bool);
-    function collateral() external view returns (address);
+    function isValidTradingLotSize(uint256 amount) external view returns (bool);
     function depositFor(address trader, uint256 rawAmount) external payable;
     function withdrawFor(address payable trader, uint256 rawAmount) external;
     function transferCashBalance(

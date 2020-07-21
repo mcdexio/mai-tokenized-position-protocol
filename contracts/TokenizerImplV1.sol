@@ -54,6 +54,7 @@ contract TokenizerImplV1 is
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
+        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
 
@@ -104,6 +105,7 @@ contract TokenizerImplV1 is
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
+        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
 
@@ -208,19 +210,19 @@ contract TokenizerImplV1 is
      *
      * Composite functions accept amount = 0.
      *
-     * @param burnAmount Burn amount.
+     * @param redeemAmount Redeem amount.
      * @param withdrawAmount The collateral amount. Note: The actual token.decimals should be filled in and not necessarily 18.
      */
-    function burnAndWithdraw(
-        uint256 burnAmount,
+    function redeemAndWithdraw(
+        uint256 redeemAmount,
         uint256 withdrawAmount
     )
         public
         virtual
         override
     {
-        if (burnAmount > 0) {
-            burn(burnAmount);
+        if (redeemAmount > 0) {
+            redeem(redeemAmount);
         }
         if (withdrawAmount > 0) {
             _perpetual.withdrawFor(msg.sender, withdrawAmount);

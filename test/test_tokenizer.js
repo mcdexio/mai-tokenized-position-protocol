@@ -20,18 +20,16 @@ contract('tokenizer', accounts => {
 
     let snapshotId;
 
-    const deploy = async () => {
-        perp = typicalPerp(accounts, false);
-        await perp.deploy();
-        tokenizer = await Tokenizer.new();
-    };
-
     beforeEach(async () => {
         snapshotId = await createEVMSnapshot();
             
-        await deploy();
+        perp = typicalPerp(accounts, false);
+        await perp.deploy();
         await perp.useDefaultGovParameters();
         await perp.usePoolDefaultParameters();
+        tokenizer = await Tokenizer.new();
+        await perp.globalConfig.addComponent(perp.perpetual.address, tokenizer.address);
+        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18);
     });
 
     afterEach(async function () {
@@ -54,15 +52,44 @@ contract('tokenizer', accounts => {
             await perp.collateral.approve(perp.perpetual.address, infinity, { from: u3 });
 
             // create amm
-            await perp.perpetual.deposit(toWad(7000 * 10 * 3), { from: u1 });
+            await perp.perpetual.deposit(toWad(7000 * 1 * 3), { from: u1 });
             await perp.amm.createPool(toWad(1), { from: u1 });
         });
 
         it("mint + redeem - success", async () => {
-            await tokenizer.mint(toWad(1), toWad(1), toWad('10000'), infinity, { from: u2 });
+            await perp.perpetual.deposit(toWad(7000 * 2), { from: u2 });
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 * 2);
+            assert.equal(fromWad(await perp.perpetual.markPrice.call()), 7000);
+
+            await tokenizer.mint(toWad(1), { from: u2 });
+            
+            // 
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), '6999.999999999999999999');
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), '7000.000000000000000001');
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
-            await tokenizer.redeem(toWad(1), toWad(1), toWad('10000'), infinity, { from: u2 });
-            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 1);
+            assert.equal(fromWad(await perp.positionSize(u2)), 1);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 1);
+            assert.equal(await perp.positionSide(u2), Side.SHORT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
+
+            await tokenizer.redeem(toWad(1), { from: u2 });
+            
+            await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+
+            // assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), '6999.999999999999999999');
+            // assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), '7000.000000000000000001');
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 0);
+            assert.equal(fromWad(await perp.positionSize(u2)), 0);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 0);
+            assert.equal(await perp.positionSide(u2), Side.FLAT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.FLAT);
+
+            await perp.perpetual.withdraw(toWad(7000 * 2), { from: u2 });
         });
 
         it("mint without deposit - failed", async () => {
@@ -70,7 +97,7 @@ contract('tokenizer', accounts => {
                 await tokenizer.mint(toWad(1), { from: u2 });
                 throw null;
             } catch (error) {
-                assert.ok(error.message.includes("SafeERC20"), error);
+                assert.ok(error.message.includes("unsafe"), error);
             }
 
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
