@@ -93,6 +93,26 @@ const typicalPerp = (accounts, isInversedContract) => {
             const index = await this.amm.indexPrice();
             await this.amm.setBlockTimestamp(index.timestamp);
         },
+
+        positionSize: async function(user) {
+            const positionAccount = await perpetual.getMarginAccount(user);
+            return positionAccount.size;
+        },
+
+        positionSide: async function(user) {
+            const positionAccount = await perpetual.getMarginAccount(user);
+            return positionAccount.side;
+        },
+
+        positionEntryValue: async function(user) {
+            const positionAccount = await perpetual.getMarginAccount(user);
+            return positionAccount.entryValue;
+        },
+        
+        cashBalanceOf: async function(user) {
+            const cashAccount = await perpetual.getMarginAccount(user);
+            return cashAccount.cashBalance;
+        },
     };
 };
     

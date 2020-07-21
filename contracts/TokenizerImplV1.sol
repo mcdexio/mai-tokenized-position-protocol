@@ -98,7 +98,7 @@ contract TokenizerImplV1 is
         emit Mint(takerAddress, amount);
     }
 
-    function burn(uint256 amount)
+    function redeem(uint256 amount)
         public
         virtual
         override
