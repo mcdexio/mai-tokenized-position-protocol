@@ -184,12 +184,31 @@ contract('tokenizer', accounts => {
         });
 
         it("transfer the token", async () => {
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            await tokenizer.transfer(u3, toWad(1), { from: u2 });
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
+            assert.equal(fromWad(await tokenizer.balanceOf(u3)), 1);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 1);
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(u3)), 0);
+        
+            await tokenizer.redeem(toWad(1), { from: u3 });
+            assert.equal(fromWad(await tokenizer.balanceOf(u3)), 0);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 0);
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000);
+            assert.equal(fromWad(await perp.positionSize(u3)), 1);
+            assert.equal(await perp.positionSide(u3), Side.LONG);
         });
 
-        it("emergency", async () => {
+        it("if price rises", async () => {
         });
-
-        it("global settlement", async () => {
-        });
+        // it("if price drops", async () => {
+        // });
+        // it("if fr > 0", async () => {
+        // });
+        // it("if fr < 0", async () => {
+        // });
     });
 });
