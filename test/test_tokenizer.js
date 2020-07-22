@@ -36,7 +36,7 @@ contract('tokenizer', accounts => {
         await restoreEVMSnapshot(snapshotId);
     });
 
-    describe("simple use case (vanilla)", async () => {
+    describe("vanilla", async () => {
         beforeEach(async () => {
             // index
             await perp.setIndexPrice(7000);
@@ -111,10 +111,12 @@ contract('tokenizer', accounts => {
         it("composite mint + redeem - success", async () => {
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-            assert.equal(fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2)
-            
-            assert.ok((await perp.perpetual.marginBalance.call(u2)).lte(toWad(7000)));
-            assert.ok((await perp.perpetual.marginBalance.call(tokenizer.address)).gte(toWad(7000)));
+
+            assert.equal(fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2);
+            const u2Margin1 = new BigNumber(await perp.perpetual.marginBalance.call(u2));
+            assert.ok(u2Margin1.lte(toWad(7000)), u2Margin1.toFixed());
+            const tpMargin1 = new BigNumber(await perp.perpetual.marginBalance.call(tokenizer.address));
+            assert.ok(tpMargin1.gte(toWad(7000)), tpMargin1.toFixed());
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
             assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.totalSupply()), 1);
@@ -140,6 +142,54 @@ contract('tokenizer', accounts => {
 
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), '69999.9999999999999999')
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
+        });
+
+        it("the 2nd mint if price keeps", async () => {
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+
+            assert.equal(fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2);
+            const u2Margin1 = new BigNumber(await perp.perpetual.marginBalance.call(u2));
+            assert.ok(u2Margin1.lte(toWad(7000)), u2Margin1.toFixed());
+            const tpMargin1 = new BigNumber(await perp.perpetual.marginBalance.call(tokenizer.address));
+            assert.ok(tpMargin1.gte(toWad(7000)), tpMargin1.toFixed());
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 1);
+            assert.equal(fromWad(await perp.positionSize(u2)), 1);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 1);
+            assert.equal(await perp.positionSide(u2), Side.SHORT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
+
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
+
+            assert.equal(fromWad(await perp.collateral.balanceOf(u3)), 7000 * 10 - 7000 * 2);
+            const u3Margin2 = new BigNumber(await perp.perpetual.marginBalance.call(u3));
+            assert.ok(u3Margin2.lte(toWad(7000)), u3Margin2.toFixed());
+            const tpMargin2 = new BigNumber(await perp.perpetual.marginBalance.call(tokenizer.address));
+            assert.ok(tpMargin2.gte(toWad(14000)), tpMargin2.toFixed());
+            assert.equal(fromWad(await tokenizer.balanceOf(u3)), 1);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 2);
+            assert.equal(fromWad(await perp.positionSize(u3)), 1);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 2);
+            assert.equal(await perp.positionSide(u3), Side.SHORT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
+
+            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u3 });
+            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 });
+
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), '69999.9999999999999999')
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), '69999.9999999999999999')
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
+        });
+
+        it("transfer the token", async () => {
+        });
+
+        it("emergency", async () => {
+        });
+
+        it("global settlement", async () => {
         });
     });
 });

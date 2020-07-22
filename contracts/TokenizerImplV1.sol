@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
+pragma experimental ABIEncoderV2; // to enable structure-type parameter
 
 import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
@@ -48,13 +49,14 @@ contract TokenizerImplV1 is
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
     }
 
-    function mint(uint256 amount)
+    function mint(uint256 tpAmount)
         public
         virtual
         override
+        positionMustBeConsistent
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
+        require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
 
@@ -64,14 +66,14 @@ contract TokenizerImplV1 is
         if (totalSupply() > 0) {
             uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
             require(marginBalance > 0, "no margin balance");
-            // collateral = marginBalance * amount / totalSupply
-            collateral = marginBalance.wfrac(amount, totalSupply()) + 1;
+            // collateral = marginBalance * tpAmount / totalSupply
+            collateral = marginBalance.wfrac(tpAmount, totalSupply()) + 1;
             price = marginBalance.wdiv(totalSupply());
         } else {
             uint256 markPrice = _perpetual.markPrice();
             require(markPrice > 0, "zero markPrice");
-            // collateral = markPrice * amount
-            collateral = markPrice.wmul(amount) + 1;
+            // collateral = markPrice * tpAmount
+            collateral = markPrice.wmul(tpAmount) + 1;
             price = markPrice;
         }
         _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
@@ -83,7 +85,7 @@ contract TokenizerImplV1 is
             makerAddress,
             LibTypes.Side.SHORT, // taker side
             price,
-            amount
+            tpAmount
         );
 
         // is safe
@@ -95,26 +97,27 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
-        ERC20Impl._mint(takerAddress, amount);
-        emit Mint(takerAddress, amount);
+        ERC20Impl._mint(takerAddress, tpAmount);
+        emit Mint(takerAddress, tpAmount);
     }
 
-    function redeem(uint256 amount)
+    function redeem(uint256 tpAmount)
         public
         virtual
         override
+        positionMustBeConsistent
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
+        require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
 
         // price and collateral returned
         uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
         require(marginBalance > 0, "no margin balance");
-        // collateral = marginBalance * amount / totalSupply
+        // collateral = marginBalance * tpAmount / totalSupply
         require(totalSupply() > 0, "zero supply");
-        uint256 collateral = marginBalance.wfrac(amount, totalSupply());
+        uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply());
         uint256 price = marginBalance.wdiv(totalSupply());
         
         // trade
@@ -124,7 +127,7 @@ contract TokenizerImplV1 is
             makerAddress,
             LibTypes.Side.LONG, // taker side
             price,
-            amount
+            tpAmount
         );
         _perpetual.transferCashBalance(makerAddress, takerAddress, collateral);
 
@@ -137,8 +140,8 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
-        ERC20Impl._burn(takerAddress, amount);
-        emit Burn(takerAddress, amount);
+        ERC20Impl._burn(takerAddress, tpAmount);
+        emit Burn(takerAddress, tpAmount);
     }
 
     function settle()
@@ -147,10 +150,10 @@ contract TokenizerImplV1 is
         override
     {
         require(_perpetual.status() == LibTypes.Status.SETTLED, "wrong perpetual status");
-        _perpetual.settle();
+        _perpetual.settle(); // do nothing if already settled
         address payable takerAddress = msg.sender;
         address makerAddress = address(this);
-        uint256 amount = balanceOf(takerAddress);
+        uint256 tpAmount = balanceOf(takerAddress);
         
         // collateral returned
         IERC20 ctk = IERC20(_perpetual.collateral());
@@ -163,9 +166,9 @@ contract TokenizerImplV1 is
             marginBalance = makerAddress.balance;
         }
         require(marginBalance > 0, "no margin balance");
-        // collateral = my collateral * amount / totalSupply
+        // collateral = my collateral * tpAmount / totalSupply
         require(totalSupply() > 0, "zero supply");
-        uint256 collateral = marginBalance.wfrac(amount, totalSupply());
+        uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply());
         uint256 rawCollateral = collateral.div(_collateralScaler);
         if (address(ctk) != address(0)) {
             // erc20
@@ -176,12 +179,12 @@ contract TokenizerImplV1 is
         }
 
         // burn
-        ERC20Impl._burn(takerAddress, amount);
-        emit Burn(takerAddress, amount);
+        ERC20Impl._burn(takerAddress, tpAmount);
+        emit Burn(takerAddress, tpAmount);
     }
 
     /**
-     * @notice This is a composite function of perp.deposit + tp.mint.
+     * @dev This is a composite function of perp.deposit + tp.mint.
      *
      * Composite functions accept amount = 0.
      *
@@ -206,7 +209,7 @@ contract TokenizerImplV1 is
     }
 
     /**
-     * @notice This is a composite function of perp.deposit + tp.mint.
+     * @dev This is a composite function of perp.deposit + tp.mint.
      *
      * Composite functions accept amount = 0.
      *
@@ -227,5 +230,14 @@ contract TokenizerImplV1 is
         if (withdrawAmount > 0) {
             _perpetual.withdrawFor(msg.sender, withdrawAmount);
         }
+    }
+
+    // It's safe if perpetual.positionSize == tp.totalSupply. Otherwise the Tokenizer is dangerous.
+    modifier positionMustBeConsistent() {
+        address makerAddress = address(this);
+        LibTypes.MarginAccount memory maker = _perpetual.getMarginAccount(makerAddress);
+        require (totalSupply() == maker.size, "position must be consistent");
+
+        _;
     }
 }
