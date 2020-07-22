@@ -221,9 +221,55 @@ contract('tokenizer', accounts => {
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 6900);
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6900 * 2);
         });
-        // it("if fr > 0", async () => {
-        // });
-        // it("if fr < 0", async () => {
-        // });
+
+        it("if fr > 0", async () => {
+            await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
+            await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            
+            // buy, wait, sell, wait => markPrice is the same, but fr > 0
+            await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 600);
+            await perp.amm.sell(toWad(0.1), 0, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 600);
+
+            // await printFunding(perp.amm, perp.perpetual);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+            
+            // at this moment, 1 TP = $7033
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance(tokenizer.address)), 7033, 1);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance(u3)), 7000 * 2 - 7033, 1);
+
+            // console.log('================');
+            // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+        });
+
+        it("if fr < 0", async () => {
+            await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
+            await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            
+            // sell, wait, buy, wait => markPrice is the same, but fr < 0
+            await perp.amm.sell(toWad(0.1), 0, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 600);
+            await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 600);
+
+            // await printFunding(perp.amm, perp.perpetual);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+            
+            // at this moment, 1 TP = $6966
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966, 1);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 6966, 1);
+
+            // console.log('================');
+            // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+        });
     });
 });
