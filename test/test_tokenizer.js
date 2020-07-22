@@ -57,15 +57,16 @@ contract('tokenizer', accounts => {
         });
 
         it("mint + redeem - success", async () => {
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
             await perp.perpetual.deposit(toWad(7000 * 2), { from: u2 });
             assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 * 2);
             assert.equal(fromWad(await perp.perpetual.markPrice.call()), 7000);
+            assert.equal(fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2)
 
             await tokenizer.mint(toWad(1), { from: u2 });
             
-            // 
-            assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), '6999.999999999999999999');
-            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), '7000.000000000000000001');
+            assert.ok(new BigNumber(await perp.perpetual.marginBalance.call(u2)).lte(toWad(7000)));
+            assert.ok(new BigNumber(await perp.perpetual.marginBalance.call(tokenizer.address)).gte(toWad(7000)));
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
             assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.totalSupply()), 1);
@@ -76,11 +77,11 @@ contract('tokenizer', accounts => {
 
             await tokenizer.redeem(toWad(1), { from: u2 });
             
-            await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
-            await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
-            // assert.equal(fromWad(await perp.perpetual.marginBalance.call(u2)), '6999.999999999999999999');
-            // assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), '7000.000000000000000001');
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), '14000');
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.totalSupply()), 0);
@@ -89,7 +90,11 @@ contract('tokenizer', accounts => {
             assert.equal(await perp.positionSide(u2), Side.FLAT);
             assert.equal(await perp.positionSide(tokenizer.address), Side.FLAT);
 
-            await perp.perpetual.withdraw(toWad(7000 * 2), { from: u2 });
+            await perp.perpetual.withdraw(toWad('13999.9999999999999999'), { from: u2 });
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), '0');
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), '69999.9999999999999999')
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
         });
 
         it("mint without deposit - failed", async () => {
@@ -102,8 +107,39 @@ contract('tokenizer', accounts => {
 
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
         });
-    });
 
-    describe("composite helper", async () => {
+        it("composite mint + redeem - success", async () => {
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            assert.equal(fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2)
+            
+            assert.ok((await perp.perpetual.marginBalance.call(u2)).lte(toWad(7000)));
+            assert.ok((await perp.perpetual.marginBalance.call(tokenizer.address)).gte(toWad(7000)));
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 1);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 1);
+            assert.equal(fromWad(await perp.positionSize(u2)), 1);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 1);
+            assert.equal(await perp.positionSide(u2), Side.SHORT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
+
+            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 });
+            
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), '0');
+            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
+            assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
+            assert.equal(fromWad(await tokenizer.totalSupply()), 0);
+            assert.equal(fromWad(await perp.positionSize(u2)), 0);
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 0);
+            assert.equal(await perp.positionSide(u2), Side.FLAT);
+            assert.equal(await perp.positionSide(tokenizer.address), Side.FLAT);
+
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), '69999.9999999999999999')
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
+        });
     });
 });
