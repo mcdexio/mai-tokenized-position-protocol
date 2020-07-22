@@ -203,9 +203,24 @@ contract('tokenizer', accounts => {
         });
 
         it("if price rises", async () => {
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            await perp.setIndexPrice(7100);
+            await tokenizer.depositAndMint(toWad(7100 * 2), toWad(1), { from: u3 });
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 6900);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7100);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7100 * 2);
         });
-        // it("if price drops", async () => {
-        // });
+
+        it("if price drops", async () => {
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            await perp.setIndexPrice(6900);
+            await tokenizer.depositAndMint(toWad(6900 * 2), toWad(1), { from: u3 });
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 7100);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 6900);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6900 * 2);
+        });
         // it("if fr > 0", async () => {
         // });
         // it("if fr < 0", async () => {
