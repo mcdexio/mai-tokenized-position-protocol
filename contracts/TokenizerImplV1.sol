@@ -48,15 +48,15 @@ contract TokenizerImplV1 is
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
     }
 
-    function mint(uint256 amount)
+    function mint(uint256 tpAmount)
         public
         virtual
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
+        (tpAmount, uint256 amount) = normalizeAmount(tpAmount);
 
         // price and collateral required
         uint256 collateral;
@@ -95,25 +95,24 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
-        ERC20Impl._mint(takerAddress, amount);
-        emit Mint(takerAddress, amount);
+        ERC20Impl._mint(takerAddress, tpAmount);
+        emit Mint(takerAddress, tpAmount);
     }
 
-    function redeem(uint256 amount)
+    function redeem(uint256 tpAmount)
         public
         virtual
         override
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(amount), "amount must be divisible by tradingLotSize");
+        require(totalSupply() > 0, "zero supply");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
+        (tpAmount, uint256 amount) = normalizeAmount(tpAmount);
 
         // price and collateral returned
         uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
-        require(marginBalance > 0, "no margin balance");
         // collateral = marginBalance * amount / totalSupply
-        require(totalSupply() > 0, "zero supply");
         uint256 collateral = marginBalance.wfrac(amount, totalSupply());
         uint256 price = marginBalance.wdiv(totalSupply());
         
@@ -137,8 +136,8 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
-        ERC20Impl._burn(takerAddress, amount);
-        emit Burn(takerAddress, amount);
+        ERC20Impl._burn(takerAddress, tpAmount);
+        emit Burn(takerAddress, tpAmount);
     }
 
     function settle()
@@ -150,7 +149,8 @@ contract TokenizerImplV1 is
         _perpetual.settle();
         address payable takerAddress = msg.sender;
         address makerAddress = address(this);
-        uint256 amount = balanceOf(takerAddress);
+        uint256 tpAmount = balanceOf(takerAddress);
+        (tpAmount, uint256 amount) = normalizeAmount(tpAmount);
         
         // collateral returned
         IERC20 ctk = IERC20(_perpetual.collateral());
@@ -163,7 +163,7 @@ contract TokenizerImplV1 is
             marginBalance = makerAddress.balance;
         }
         require(marginBalance > 0, "no margin balance");
-        // collateral = my collateral * amount / totalSupply
+        // collateral = my collateral * amount / total amount
         require(totalSupply() > 0, "zero supply");
         uint256 collateral = marginBalance.wfrac(amount, totalSupply());
         uint256 rawCollateral = collateral.div(_collateralScaler);
@@ -227,5 +227,46 @@ contract TokenizerImplV1 is
         if (withdrawAmount > 0) {
             _perpetual.withdrawFor(msg.sender, withdrawAmount);
         }
+    }
+
+    // In most cases, perpetual.positionSize == tp.totalSupply which is simple. Otherwise, the perpetual is in a dangerous
+    // situation. We can still work as long as the assets we are operating do not exceed the assets in perpetual.
+    // sigma{y}  sigma{tp}   situation
+    //    0          0       normal. tp = pos
+    //   10         10       normal. tp = pos
+    //   10         20       liquidated. pos = tp * sigma{pos} / sigma{tp}
+    //    0         10       error. treat as an empty pool
+    //   10          0       error. treat as an empty pool
+    function normalizeAmount(uint256 tpAmount) private returns (
+        uint256 outputTPAmount,
+        uint256 outputPosition
+    ) {
+        if (totalSupply() == 0) {
+            outputPosition = tpAmount;
+            outputTPAmount = tpAmount;
+            return;
+        }
+
+        address makerAddress = address(this);
+        LibTypes.MarginAccount storage maker = _perpetual.getMarginAccount(makerAddress);
+        uint256 lotSize = _perpetual.getGovernance().lotSize;
+        if (maker.size == totalSupply()) {
+            // likely (normal)
+            // y = tp
+            outputPosition = tpAmount;
+            // align to lotSize
+            outputPosition = outputPosition.sub(outputPosition.mod(lotSize));
+            // write back. tp = y
+            outputTPAmount = outputPosition;
+            return;
+        }
+
+        // unlikely (errors occured)
+        // y = tp * sigma{y} / sigma{tp}
+        outputPosition = tpAmount.wfrac(maker.size, totalSupply());
+        // align to lotSize
+        outputPosition = outputPosition.sub(outputPosition.mod(lotSize));
+        // write back. tp = y * sigma{tp} / sigma{y}
+        outputTPAmount = outputPosition.wfrac(totalSupply(), maker.size);
     }
 }
