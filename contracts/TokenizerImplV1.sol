@@ -49,6 +49,11 @@ contract TokenizerImplV1 is
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
     }
 
+    /**
+     * @dev Mint some Tokenized Positions (tp) and get short positions in the margin account.
+     *
+     * @param tpAmount Mint amount. The unit is the same as position.
+     */
     function mint(uint256 tpAmount)
         public
         virtual
@@ -101,6 +106,12 @@ contract TokenizerImplV1 is
         emit Mint(takerAddress, tpAmount);
     }
 
+    /**
+     * @dev Burn some Tokenized Positions (tp) and get long positions (also close your current short positions)
+     *      in the margin account.
+     *
+     * @param tpAmount Burn amount. The unit is the same as position.
+     */
     function redeem(uint256 tpAmount)
         public
         virtual
@@ -144,6 +155,10 @@ contract TokenizerImplV1 is
         emit Burn(takerAddress, tpAmount);
     }
 
+    /**
+     * @dev Burn all Tokenized Positions (tp). This function can only be called after the Perpetual
+     *      is in SETTLED status.
+     */
     function settle()
         public
         virtual
