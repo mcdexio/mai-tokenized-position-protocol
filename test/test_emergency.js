@@ -54,6 +54,10 @@ contract('tokenizer', accounts => {
             // create amm
             await perp.perpetual.deposit(toWad(7000 * 1 * 3), { from: u1 });
             await perp.amm.createPool(toWad(1), { from: u1 });
+
+            // insurance
+            await perp.collateral.transfer(u1, toWad(7000));
+            await perp.perpetual.depositToInsuranceFund(toWad(7000), { from: u1 });
         });
 
         it("perp emergency - failed", async () => {
@@ -116,10 +120,82 @@ contract('tokenizer', accounts => {
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), 7000 * 10 + 7000 * 1 /* short pos is not settled yet */)
         });
 
-        // it("position inconsistent", async () => {
-        //     const a = '6966'
-        //     assertApproximate(assert, a, 7033, 1);
-        // });
+        it("position (> 0) inconsistent - failed", async () => {
+            await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
+            await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 73);
+            
+            // make tp unsafe
+            assert.ok(!(await perp.perpetual.isSafe.call(tokenizer.address)));
+            assert.ok(!(await perp.perpetual.isBankrupt.call(tokenizer.address)));
+            await perp.perpetual.liquidate(tokenizer.address, toWad(7000), { from: u1 })
+            assert.ok(await perp.perpetual.isSafe.call(tokenizer.address));
+            const poolPosition = new BigNumber(await perp.positionSize(tokenizer.address));
+            assert.ok(poolPosition.gt(0), poolPosition.toFixed());
+
+            // await printFunding(perp.amm, perp.perpetual);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+
+            try {
+                await tokenizer.mint(toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("consistent"));
+            }
+            try {
+                await tokenizer.redeem(toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("consistent"));
+            }
+            try {
+                await tokenizer.settle({ from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("wrong perpetual status"));
+            }
+        });
+
+        it("position (= 0) inconsistent - failed", async () => {
+            await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
+            await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+            await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 75);
+            
+            // make tp unsafe
+            assert.ok(!(await perp.perpetual.isSafe.call(tokenizer.address)));
+            assert.ok(await perp.perpetual.isBankrupt.call(tokenizer.address));
+            await perp.perpetual.liquidate(tokenizer.address, toWad(7000), { from: u1 })
+            assert.ok(await perp.perpetual.isSafe.call(tokenizer.address));
+            assert.equal(fromWad(await perp.positionSize(tokenizer.address)), 0);
+
+            // await printFunding(perp.amm, perp.perpetual);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+            
+            try {
+                await tokenizer.mint(toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("consistent"));
+            }
+            try {
+                await tokenizer.redeem(toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("consistent"));
+            }
+            try {
+                await tokenizer.settle({ from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("wrong perpetual status"));
+            }
+        });
 
         // it("tp pause", async () => {
         // });
