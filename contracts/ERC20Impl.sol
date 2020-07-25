@@ -4,12 +4,12 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./Storage.sol";
+import "./TokenizerStorage.sol";
 
 /**
  * @notice Implemetation of ERC20 interfaces.
  */
-contract ERC20Impl is Storage, IERC20 {
+contract ERC20Impl is TokenizerStorage, IERC20 {
     using SafeMath for uint256;
 
     // using fixed decimals 18
@@ -37,7 +37,13 @@ contract ERC20Impl is Storage, IERC20 {
 
     // code below comes from ERC20 by openzepplin
     // "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -51,7 +57,13 @@ contract ERC20Impl is Storage, IERC20 {
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
         _transfer(sender, recipient, amount);
         _approve(
             sender,

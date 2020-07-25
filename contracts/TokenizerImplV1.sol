@@ -59,6 +59,8 @@ contract TokenizerImplV1 is
         virtual
         override
         positionMustBeConsistent
+        whenNotPaused
+        whenNotStopped
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
         require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
@@ -117,6 +119,7 @@ contract TokenizerImplV1 is
         virtual
         override
         positionMustBeConsistent
+        whenNotPaused
     {
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
         require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");

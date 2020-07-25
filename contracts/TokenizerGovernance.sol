@@ -18,7 +18,7 @@ contract TokenizerGovernance is
     /**
      * @dev Get mintFeeRate
      */
-    function getMintFeeRate() external view uint256 { return _mintFeeRate; }
+    function getMintFeeRate() external view returns (uint256) { return _mintFeeRate; }
 
     /**
      * @dev Set value of configuration entry.
