@@ -107,6 +107,7 @@ contract('emergency', accounts => {
         await tokenizer.settle({ from: u3 });
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 1 /* short pos is not settled yet */)
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), 7000 * 10 - 7000 * 1 /* short pos is not settled yet */)
+        assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 
     it("perp settled, transfer token - success", async () => {
@@ -119,6 +120,7 @@ contract('emergency', accounts => {
         await tokenizer.settle({ from: u3 });
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2 /* short pos is not settled yet */)
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), 7000 * 10 + 7000 * 1 /* short pos is not settled yet */)
+        assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 
     it("position (> 0) inconsistent - failed", async () => {
@@ -242,6 +244,25 @@ contract('emergency', accounts => {
         }
     });
 
-    it("tp stop", async () => {
+    it("tp shutdown", async () => {
+        await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+        await tokenizer.shutdown();
+        try {
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes(": stopped"));
+        }
+        await tokenizer.approve(u2, infinity, { from: u2 });
+        await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
+        await tokenizer.transfer(u2, toWad(1), { from: u3 });
+        await tokenizer.redeem(toWad(1), { from: u2 });
+        try {
+            await tokenizer.settle({ from: u2 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("wrong perpetual status"));
+        }
+        assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 });
