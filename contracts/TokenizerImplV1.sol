@@ -9,12 +9,12 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./LibPerpetualMath.sol";
-import "./Storage.sol";
+import "./TokenizerStorage.sol";
 import "./ERC20Impl.sol";
 import "./ITokenizer.sol";
 
 contract TokenizerImplV1 is
-    Storage,
+    TokenizerStorage,
     ERC20Impl,
     ITokenizer,
     Initializable
