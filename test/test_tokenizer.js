@@ -303,20 +303,14 @@ contract('tokenizer', accounts => {
             // gov
             await tokenizer.setMintFeeRate(toWad("0.01"));
         });
-
-        it("change dev", async () => {
-            assert.equal(await tokenizer.getDevAddress(), dev);
-            await tokenizer.setDevAddress(u1);
-            assert.equal(await tokenizer.getDevAddress(), u1);
-        });
         
         it("mint - success", async () => {
             assert.equal(fromWad(await tokenizer.getMintFeeRate()), "0.01");
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
 
-                // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
-                // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 - 70, 1);
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7000, 1);
