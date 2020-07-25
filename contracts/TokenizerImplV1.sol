@@ -10,12 +10,14 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./LibPerpetualMath.sol";
 import "./TokenizerStorage.sol";
+import "./TokenizerGovernance.sol";
 import "./ERC20Impl.sol";
 import "./ITokenizer.sol";
 
 contract TokenizerImplV1 is
     TokenizerStorage,
     ERC20Impl,
+    TokenizerGovernance,
     ITokenizer,
     Initializable
 {
@@ -33,7 +35,8 @@ contract TokenizerImplV1 is
         string calldata name,
         string calldata symbol,
         address perpetual,
-        uint256 collateralDecimals
+        uint256 collateralDecimals,
+        address devAddress
     )
         external
         initializer
@@ -41,12 +44,12 @@ contract TokenizerImplV1 is
         _name = name;
         _symbol = symbol;
         _perpetual = IPerpetual(perpetual);
-
         // This statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
         // scaler = (_decimals == MAX_DECIMALS ? 1 : 10**(MAX_DECIMALS.sub(_decimals))).toInt256();
         // But this will not.
         require(collateralDecimals <= MAX_DECIMALS, "decimals out of range");
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
+        _devAddress = devAddress;
     }
 
     /**
@@ -84,6 +87,10 @@ contract TokenizerImplV1 is
             price = markPrice;
         }
         _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
+
+        // fee
+        uint256 fee = collateral.wmul(_mintFeeRate);
+        _perpetual.transferCashBalance(takerAddress, _devAddress, fee);
 
         // trade
         require(price > 0, "zero price");

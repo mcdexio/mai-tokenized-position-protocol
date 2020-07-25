@@ -29,7 +29,7 @@ contract('tokenizer', accounts => {
         await perp.usePoolDefaultParameters();
         tokenizer = await Tokenizer.new();
         await perp.globalConfig.addComponent(perp.perpetual.address, tokenizer.address);
-        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18);
+        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18, dev);
     });
 
     afterEach(async function () {
@@ -238,9 +238,9 @@ contract('tokenizer', accounts => {
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
             
             // at this moment, 1 TP = $7033
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance(tokenizer.address)), 7033, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033, 1);
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance(u3)), 7000 * 2 - 7033, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 7033, 1);
 
             // console.log('================');
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
@@ -270,6 +270,49 @@ contract('tokenizer', accounts => {
             // console.log('================');
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+        });
+    });
+
+    describe("fees", async () => {
+        beforeEach(async () => {
+            // index
+            await perp.setIndexPrice(7000);
+            const indexPrice = await perp.amm.indexPrice();
+            assert.equal(fromWad(indexPrice.price), 7000);
+
+            // approve
+            await perp.collateral.transfer(u1, toWad(7000 * 1 * 3));
+            await perp.collateral.transfer(u2, toWad(7000 * 10));
+            await perp.collateral.transfer(u3, toWad(7000 * 10));
+            await perp.collateral.approve(perp.perpetual.address, infinity, { from: u1 });
+            await perp.collateral.approve(perp.perpetual.address, infinity, { from: u2 });
+            await perp.collateral.approve(perp.perpetual.address, infinity, { from: u3 });
+
+            // create amm
+            await perp.perpetual.deposit(toWad(7000 * 1 * 3), { from: u1 });
+            await perp.amm.createPool(toWad(1), { from: u1 });
+
+            // gov
+            await tokenizer.setMintFeeRate(toWad("0.01"));
+        });
+
+        it("change dev", async () => {
+            assert.equal(await tokenizer.getDevAddress(), dev);
+            await tokenizer.setDevAddress(u1);
+            assert.equal(await tokenizer.getDevAddress(), u1);
+        });
+        
+        it("mint - success", async () => {
+            assert.equal(fromWad(await tokenizer.getMintFeeRate()), "0.01");
+            assertApproximate(assert, fromWad(await perp.collateral.balanceOf(perp.perpetual.address)), 7000 * 3);
+            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+
+                // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+                // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 - 70, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7000, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(dev)), 70, 1);
         });
     });
 });

@@ -21,4 +21,5 @@ contract TokenizerStorage is
 
     // Governance
     uint256 internal _mintFeeRate;
+    address internal _devAddress;
 }

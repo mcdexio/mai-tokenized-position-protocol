@@ -6,7 +6,8 @@ import "./TokenizerStorage.sol";
 contract TokenizerGovernance is
     TokenizerStorage
 {
-    event SetConfigurationEntry(bytes32 key, int256 value);
+    event UpdateMintFeeRate(uint256 value);
+    event UpdateDevAddress(address value);
 
     // Check if sender is owner.
     modifier onlyAdministrator() {
@@ -21,17 +22,24 @@ contract TokenizerGovernance is
     function getMintFeeRate() external view returns (uint256) { return _mintFeeRate; }
 
     /**
-     * @dev Set value of configuration entry.
-     * @param key   Name string of entry to set.
-     * @param value Value of entry to set.
+     * @dev Set mintFeeRate
      */
-    function setConfigurationEntry(bytes32 key, int256 value) external onlyAdministrator {
-        if (key == "mintFeeRate") {
-            _mintFeeRate = uint256(value);
-        } else {
-            revert("unrecognized key");
-        }
-        emit SetConfigurationEntry(key, value);
+    function setMintFeeRate(uint256 value) external {
+        _mintFeeRate = value;
+        UpdateMintFeeRate(value);
+    }
+
+    /**
+     * @dev Get mintFeeRate
+     */
+    function getDevAddress() external view returns (address) { return _devAddress; }
+
+    /**
+     * @dev Set mintFeeRate
+     */
+    function setDevAddress(address value) external {
+        _devAddress = value;
+        emit UpdateDevAddress(value);
     }
 
     /**
