@@ -29,7 +29,7 @@ contract('tokenizer', accounts => {
         await perp.usePoolDefaultParameters();
         tokenizer = await Tokenizer.new();
         await perp.globalConfig.addComponent(perp.perpetual.address, tokenizer.address);
-        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18, dev);
+        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18, dev, toWad('1000000'));
     });
 
     afterEach(async function () {

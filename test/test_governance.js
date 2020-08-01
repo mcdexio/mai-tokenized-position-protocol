@@ -29,7 +29,7 @@ contract('governance', accounts => {
         await perp.usePoolDefaultParameters();
         tokenizer = await Tokenizer.new();
         await perp.globalConfig.addComponent(perp.perpetual.address, tokenizer.address);
-        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18, dev);
+        await tokenizer.initialize("USD -> BTC", "uBTC", perp.perpetual.address, 18, dev, toWad('1000000'));
     });
 
     afterEach(async function () {
@@ -53,42 +53,42 @@ contract('governance', accounts => {
             await tokenizer.setDevAddress(u1, { from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("not owner"), error);
         }
 
         try {
             await tokenizer.setMintFeeRate(toWad("0.01"), { from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("not owner"), error);
         }
 
         try {
             await tokenizer.pause({ from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("unauthorized"), error);
         }
 
         try {
             await tokenizer.unpause({ from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("unauthorized"), error);
         }
 
         try {
-            await tokenizer.shutdown();
+            await tokenizer.shutdown({ from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("not owner"), error);
         }
 
         try {
-            await tokenizer.setCap(toWad(1));
+            await tokenizer.setCap(toWad(1), { from: u1 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("not owner"));
+            assert.ok(error.message.includes("not owner"), error);
         }
     })
 });

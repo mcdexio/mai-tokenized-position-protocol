@@ -28,7 +28,7 @@ contract('stoppable', accounts => {
             await stoppable.drasticMeasure();
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("Stoppable: not stopped"));
+            assert.ok(error.message.includes("Stoppable: not stopped"), error);
         }
         assert.ok(!(await stoppable.drasticMeasureTaken()));
     });
@@ -43,7 +43,7 @@ contract('stoppable', accounts => {
                 await stoppable.normalProcess();
                 throw null;
             } catch (error) {
-                assert.ok(error.message.includes("Stoppable: stopped"));
+                assert.ok(error.message.includes("Stoppable: stopped"), error);
             }
         });
 
@@ -57,7 +57,7 @@ contract('stoppable', accounts => {
                 await stoppable.normalProcess();
                 throw null;
             } catch (error) {
-                assert.ok(error.message.includes("Stoppable: stopped"));
+                assert.ok(error.message.includes("Stoppable: stopped"), error);
             }
         });
     });

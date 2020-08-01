@@ -113,7 +113,7 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
-        ERC20Impl._mint(takerAddress, tpAmount);
+        ERC20._mint(takerAddress, tpAmount);
         emit Mint(takerAddress, tpAmount);
     }
 
@@ -163,7 +163,7 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
-        ERC20Impl._burn(takerAddress, tpAmount);
+        ERC20._burn(takerAddress, tpAmount);
         emit Burn(takerAddress, tpAmount);
     }
 
@@ -206,7 +206,7 @@ contract TokenizerImplV1 is
         }
 
         // burn
-        ERC20Impl._burn(takerAddress, tpAmount);
+        ERC20._burn(takerAddress, tpAmount);
         emit Burn(takerAddress, tpAmount);
     }
 
