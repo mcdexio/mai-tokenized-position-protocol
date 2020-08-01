@@ -24,7 +24,7 @@ contract TokenizerGovernance is
     /**
      * @dev Set mintFeeRate
      */
-    function setMintFeeRate(uint256 value) external {
+    function setMintFeeRate(uint256 value) external onlyAdministrator {
         _mintFeeRate = value;
         UpdateMintFeeRate(value);
     }
@@ -37,7 +37,7 @@ contract TokenizerGovernance is
     /**
      * @dev Set mintFeeRate
      */
-    function setDevAddress(address value) external {
+    function setDevAddress(address value) external onlyAdministrator {
         _devAddress = value;
         emit UpdateDevAddress(value);
     }
@@ -75,5 +75,19 @@ contract TokenizerGovernance is
         onlyAdministrator
     {
         _stop();
+    }
+
+    /**
+     * @dev Get cap
+     */
+    function getCap() external view returns (uint256) { return _cap; }
+
+    /**
+     * @dev Sets the value of the `cap`. This value is immutable, it can only be
+     * set once during construction.
+     */
+    function setCap(uint256 cap) external onlyAdministrator {
+        require(cap > 0, "ERC20Capped: cap is 0");
+        _cap = cap;
     }
 }

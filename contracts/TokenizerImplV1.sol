@@ -11,12 +11,12 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./LibPerpetualMath.sol";
 import "./TokenizerStorage.sol";
 import "./TokenizerGovernance.sol";
-import "./ERC20Impl.sol";
+import "./ERC20Capped.sol";
 import "./ITokenizer.sol";
 
 contract TokenizerImplV1 is
     TokenizerStorage,
-    ERC20Impl,
+    ERC20Capped,
     TokenizerGovernance,
     ITokenizer,
     Initializable
@@ -36,7 +36,8 @@ contract TokenizerImplV1 is
         string calldata symbol,
         address perpetual,
         uint256 collateralDecimals,
-        address devAddress
+        address devAddress,
+        uint256 cap
     )
         external
         initializer
@@ -50,6 +51,7 @@ contract TokenizerImplV1 is
         require(collateralDecimals <= MAX_DECIMALS, "decimals out of range");
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
         _devAddress = devAddress;
+        _cap = cap;
     }
 
     /**
@@ -264,5 +266,17 @@ contract TokenizerImplV1 is
         require (totalSupply() == maker.size, "position must be consistent");
 
         _;
+    }
+
+    /**
+     * @dev See {ERC20-_beforeTokenTransfer}.
+     *
+     * Requirements:
+     *
+     * - mint, burn, transfer can not work when paused
+     */
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+        // require(!_paused, "Pausable: paused"); // !!!!!!!!!!!!!!!!!!1
     }
 }

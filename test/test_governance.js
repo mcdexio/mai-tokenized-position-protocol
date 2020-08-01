@@ -47,4 +47,48 @@ contract('governance', accounts => {
         await tokenizer.setMintFeeRate(toWad("0.01"));
         assert.equal(fromWad(await tokenizer.getMintFeeRate()), "0.01");
     });
+
+    it("only owner", async () => {
+        try {
+            await tokenizer.setDevAddress(u1, { from: u1 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+
+        try {
+            await tokenizer.setMintFeeRate(toWad("0.01"), { from: u1 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+
+        try {
+            await tokenizer.pause({ from: u1 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+
+        try {
+            await tokenizer.unpause({ from: u1 });
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+
+        try {
+            await tokenizer.shutdown();
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+
+        try {
+            await tokenizer.setCap(toWad(1));
+            throw null;
+        } catch (error) {
+            assert.ok(error.message.includes("not owner"));
+        }
+    })
 });

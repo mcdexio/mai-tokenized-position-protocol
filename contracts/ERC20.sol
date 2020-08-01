@@ -12,7 +12,7 @@ import "./TokenizerStorage.sol";
  * This file came from "@openzeppelin/contracts/token/ERC20/ERC20.sol", except:
  * 1. All storage are moved into the parent
  * 2. Decimals is always 18
- * 3. Omit Context
+ * 3. Omit Context. Omit constructor
  */
 contract ERC20Impl is TokenizerStorage, IERC20 {
     using SafeMath for uint256;
