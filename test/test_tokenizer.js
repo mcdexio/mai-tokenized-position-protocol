@@ -279,6 +279,22 @@ contract('tokenizer', accounts => {
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
         });
+
+        it("cap", async () => {
+            await perp.collateral.approve(perp.perpetual.address, infinity, { from: u2 });
+            await perp.collateral.mint(u2, toWad(7000 * 2 * 1000000 + 7000 * 2 * 1));
+            await tokenizer.depositAndMint(toWad(7000 * 2 * 1000000), toWad(1000000), { from: u2 });
+            try {
+                await tokenizer.depositAndMint(toWad(7000 * 2 * 1), '1', { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("cap"), error);
+            }
+
+            // change cap
+            await tokenizer.setCap(toWad(1000001));
+            await tokenizer.depositAndMint(toWad(7000 * 2 * 1), '1', { from: u2 });
+        });
     });
 
     describe("fees", async () => {
