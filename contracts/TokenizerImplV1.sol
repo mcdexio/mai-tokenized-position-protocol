@@ -275,8 +275,7 @@ contract TokenizerImplV1 is
      *
      * - mint, burn, transfer can not work when paused
      */
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
-        // require(!_paused, "Pausable: paused"); // !!!!!!!!!!!!!!!!!!1
     }
 }
