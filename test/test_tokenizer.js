@@ -1,7 +1,7 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
-const { toWad, fromWad, infinity } = require('./constants');
+const { toWad, fromWad, infinity, Side } = require('./constants');
 const { inspect, printFunding } = require('./funcs')
 const { typicalPerp } = require('./perp.js')
 const Tokenizer = artifacts.require('TokenizerImplV1.sol');
