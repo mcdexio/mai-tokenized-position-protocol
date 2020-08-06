@@ -1,7 +1,6 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
-const { toWei, fromWei, toWad, fromWad, infinity, Side } = require('./constants');
 const Stoppable = artifacts.require('TestStoppable.sol');
 
 contract('stoppable', accounts => {

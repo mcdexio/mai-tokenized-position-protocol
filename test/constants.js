@@ -1,20 +1,6 @@
 const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 1000 });
 
-const _weis = new BigNumber('1000000000000000000');
-
-const toWei = (...xs) => {
-    let sum = new BigNumber(0);
-    for (var x of xs) {
-        sum = sum.plus(new BigNumber(x).times(_weis));
-    }
-    return sum.toFixed();
-};
-
-const fromWei = x => {
-    return new BigNumber(x).div(_weis).toString();
-};
-
 const _wad = new BigNumber('1000000000000000000');
 
 const toWad = (...xs) => {
@@ -29,7 +15,6 @@ const fromWad = x => {
     return new BigNumber(x).div(_wad).toString();
 };
 
-
 const infinity = '999999999999999999999999999999999999999999';
 
 const Side = {
@@ -39,8 +24,6 @@ const Side = {
 }
 
 module.exports = {
-    toWei,
-    fromWei,
     toWad,
     fromWad,
     infinity,
