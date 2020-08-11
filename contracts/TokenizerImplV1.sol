@@ -73,21 +73,23 @@ contract TokenizerImplV1 is
         address makerAddress = address(this);
 
         // price and collateral required
+        uint256 markPrice = _perpetual.markPrice();
+        require(markPrice > 0, "zero markPrice");
         uint256 collateral;
         uint256 price;
         if (totalSupply() > 0) {
             uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
             require(marginBalance > 0, "no margin balance");
-            // collateral = marginBalance * tpAmount / totalSupply
-            collateral = marginBalance.wfrac(tpAmount, totalSupply()) + 1;
+            // collateral = 2 * marginBalance * tpAmount / totalSupply - tpAmount * markPrice
+            collateral = marginBalance.wfrac(tpAmount, totalSupply()).mul(2);
+            collateral = collateral.sub(tpAmount.wmul(markPrice));
             price = marginBalance.wdiv(totalSupply());
         } else {
-            uint256 markPrice = _perpetual.markPrice();
-            require(markPrice > 0, "zero markPrice");
             // collateral = markPrice * tpAmount
-            collateral = markPrice.wmul(tpAmount) + 1;
+            collateral = markPrice.wmul(tpAmount);
             price = markPrice;
         }
+        collateral = collateral + 1; // deposit a little more
         _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
 
         // fee
@@ -136,11 +138,15 @@ contract TokenizerImplV1 is
         address makerAddress = address(this);
 
         // price and collateral returned
+        uint256 markPrice = _perpetual.markPrice();
+        require(markPrice > 0, "zero markPrice");
         uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
         require(marginBalance > 0, "no margin balance");
-        // collateral = marginBalance * tpAmount / totalSupply
+        // collateral = 2 * marginBalance * tpAmount / totalSupply - tpAmount * markPrice
         require(totalSupply() > 0, "zero supply");
-        uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply());
+        uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply()).mul(2);
+        collateral = collateral.sub(tpAmount.wmul(markPrice));
+        collateral = collateral - 1; // withdraw a little less
         uint256 price = marginBalance.wdiv(totalSupply());
         
         // trade

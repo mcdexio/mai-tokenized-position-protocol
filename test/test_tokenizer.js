@@ -76,7 +76,7 @@ contract('tokenizer', accounts => {
             assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
 
             await tokenizer.redeem(toWad(1), { from: u2 });
-            
+
             // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
@@ -239,12 +239,17 @@ contract('tokenizer', accounts => {
             // await inspect(perp.proxy.address, perp.perpetual, perp.proxy, perp.amm);
             
             // at this moment, 1 TP = $7033.69, markPrice = 7035
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69, '0.1');
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69 * 2, '0.1');
 
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
-            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 7033.69, 1);
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 7033.69 - 1.30 /* short pnl */, 1);
+            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 7033.69 + 1.30 /* mint diff */, '0.1');
+            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 7033.69, '0.1');
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 7033.69 + 1.30 /* mint diff */ - 1.30 /* short pnl */, '0.1');
+          
+            await tokenizer.redeem(toWad(1), { from: u3 });
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69, '0.1');
 
             // console.log('================');
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
@@ -268,12 +273,17 @@ contract('tokenizer', accounts => {
             // await inspect(perp.proxy.address, perp.perpetual, perp.proxy, perp.amm);
 
             // at this moment, 1 TP = $6966.30, markPrice = 6965
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30, 1);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30, '0.1');
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
-
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30 * 2, '0.1');
+        
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
-            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 6966.30, 1);
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 6966.30 + 1.3 /* short pnl */, 1);
+            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 6966.30 - 1.3 /* mint diff */, '0.1');
+            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 6966.30, '0.1');
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 6966.30 - 1.3 /* mint diff */ + 1.3 /* short pnl */, '0.1');
+
+            await tokenizer.redeem(toWad(1), { from: u3 });
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30, '0.1');
 
             // console.log('================');
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
