@@ -25,7 +25,7 @@ contract TokenizerImplV1 is
     using SafeCast for int256;
     using SafeERC20 for IERC20;
 
-    // Available decimals should be within [0, 18]
+    // available decimals should be within [0, 18]
     uint256 private constant MAX_DECIMALS = 18;
 
     event Mint(address indexed minter, uint256 amount);
@@ -45,9 +45,9 @@ contract TokenizerImplV1 is
         _name = name;
         _symbol = symbol;
         _perpetual = IPerpetual(perpetual);
-        // This statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
+        // this statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
         // scaler = (_decimals == MAX_DECIMALS ? 1 : 10**(MAX_DECIMALS.sub(_decimals))).toInt256();
-        // But this will not.
+        // but this will not.
         require(collateralDecimals <= MAX_DECIMALS, "decimals out of range");
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
         _devAddress = devAddress;
@@ -57,7 +57,7 @@ contract TokenizerImplV1 is
     /**
      * @dev Mint some Tokenized Positions (tp) and get short positions in the margin account.
      *
-     * @param tpAmount Mint amount. The unit is the same as position.
+     * @param tpAmount Mint amount ERC20 token. The unit is the same as position.
      */
     function mint(uint256 tpAmount)
         public
@@ -123,7 +123,7 @@ contract TokenizerImplV1 is
      * @dev Burn some Tokenized Positions (tp) and get long positions (also close your current short positions)
      *      in the margin account.
      *
-     * @param tpAmount Burn amount. The unit is the same as position.
+     * @param tpAmount Burn amount ERC20 token. The unit is the same as position.
      */
     function redeem(uint256 tpAmount)
         public
