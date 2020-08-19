@@ -56,40 +56,41 @@ contract TokenizerImplV1 is
 
     /**
      * @dev Mint some Tokenized Positions (tp) and get short positions in the margin account.
-     *
+     * 
+     * Require TP.Normal and perpetual.Normal and TP was not liquidated.
      * @param tpAmount Mint amount ERC20 token. The unit is the same as position.
      */
     function mint(uint256 tpAmount)
         public
         virtual
         override
-        positionMustBeConsistent
         whenNotPaused
         whenNotStopped
     {
-        require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
-
-        // price and collateral required
+        require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
+        
         uint256 markPrice = _perpetual.markPrice();
         require(markPrice > 0, "zero markPrice");
+        uint256 tradingPrice = markPrice;
+        
+        LibTypes.MarginAccount memory maker = _perpetual.getMarginAccount(makerAddress);
+        require(maker.size == totalSupply(), "position inconsistent");
+        require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
+        uint256 amount = tpAmount;
+        
         uint256 collateral;
-        uint256 price;
-        if (totalSupply() > 0) {
-            uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
-            require(marginBalance > 0, "no margin balance");
-            // collateral = 2 * marginBalance * tpAmount / totalSupply - tpAmount * markPrice
-            collateral = marginBalance.wfrac(tpAmount, totalSupply()).mul(2);
-            collateral = collateral.sub(tpAmount.wmul(markPrice));
-            price = marginBalance.wdiv(totalSupply());
+        if (totalSupply() == 0) {
+            // DeltaCash:= MarkPrice * Amount
+            collateral = markPrice.wmul(amount);
         } else {
-            // collateral = markPrice * tpAmount
-            collateral = markPrice.wmul(tpAmount);
-            price = markPrice;
+            // DeltaCash:= OldMarginBalance * Amount / PositionSize
+            uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
+            require(marginBalance > 0, "zero margin balance");
+            collateral = marginBalance.wfrac(amount, maker.size);
         }
-        collateral = collateral + 1; // deposit a little more
+        collateral = collateral.add(1); // deposit a little more
         _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
 
         // fee
@@ -97,13 +98,12 @@ contract TokenizerImplV1 is
         _perpetual.transferCashBalance(takerAddress, _devAddress, fee);
 
         // trade
-        require(price > 0, "zero price");
         (uint256 takerOpened, ) = _perpetual.tradePosition(
             takerAddress,
             makerAddress,
             LibTypes.Side.SHORT, // taker side
-            price,
-            tpAmount
+            tradingPrice,
+            amount
         );
 
         // is safe
@@ -123,41 +123,53 @@ contract TokenizerImplV1 is
      * @dev Burn some Tokenized Positions (tp) and get long positions (also close your current short positions)
      *      in the margin account.
      *
+     * Require TP.Normal/Stopped and perpetual.Normal.
      * @param tpAmount Burn amount ERC20 token. The unit is the same as position.
      */
     function redeem(uint256 tpAmount)
         public
         virtual
         override
-        positionMustBeConsistent
         whenNotPaused
     {
-        require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
         address takerAddress = msg.sender;
         address makerAddress = address(this);
-
-        // price and collateral returned
+        require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
+        
         uint256 markPrice = _perpetual.markPrice();
         require(markPrice > 0, "zero markPrice");
+        uint256 tradingPrice = markPrice;
+
+        LibTypes.MarginAccount memory maker = _perpetual.getMarginAccount(makerAddress);
+        require(totalSupply() >= tpAmount, "tpAmount too large");
+        uint256 amount;
+        if (maker.size == totalSupply()) {
+            // normal
+            require(_perpetual.isValidTradingLotSize(tpAmount), "tpAmount must be divisible by tradingLotSize");
+            amount = tpAmount;
+        } else {
+            // liquidated
+            // amount = PositionSize * tpAmount / totalSupply
+            amount = maker.size.wfrac(tpAmount, totalSupply());
+            uint256 lotSize = _perpetual.getGovernance().lotSize;
+            amount = amount.sub(amount.mod(lotSize)); // align to lotSize
+        }
+
+        // DeltaCash:= OldMarginBalance * Amount / PositionSize
         uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
-        require(marginBalance > 0, "no margin balance");
-        // collateral = 2 * marginBalance * tpAmount / totalSupply - tpAmount * markPrice
-        require(totalSupply() > 0, "zero supply");
-        uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply()).mul(2);
-        collateral = collateral.sub(tpAmount.wmul(markPrice));
-        collateral = collateral - 1; // withdraw a little less
-        uint256 price = marginBalance.wdiv(totalSupply());
-        
+        require(marginBalance > 0, "zero margin balance");
+        uint256 collateral = marginBalance.wfrac(amount, maker.size);
+        collateral = collateral.sub(1); // withdraw a little less
+
         // trade
-        require(price > 0, "zero price");
         (uint256 takerOpened, ) = _perpetual.tradePosition(
             takerAddress,
             makerAddress,
             LibTypes.Side.LONG, // taker side
-            price,
-            tpAmount
+            tradingPrice,
+            amount
         );
+
         _perpetual.transferCashBalance(makerAddress, takerAddress, collateral);
 
         // is safe
@@ -181,6 +193,7 @@ contract TokenizerImplV1 is
         public
         virtual
         override
+        whenNotPaused
     {
         require(_perpetual.status() == LibTypes.Status.SETTLED, "wrong perpetual status");
         _perpetual.settle(); // do nothing if already settled
@@ -199,7 +212,7 @@ contract TokenizerImplV1 is
             marginBalance = makerAddress.balance;
         }
         require(marginBalance > 0, "no margin balance");
-        // collateral = my collateral * tpAmount / totalSupply
+        // collateral = tp.collateral * tpAmount / totalSupply
         require(totalSupply() > 0, "zero supply");
         uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply());
         uint256 rawCollateral = collateral.div(_collateralScaler);
@@ -263,15 +276,6 @@ contract TokenizerImplV1 is
         if (withdrawAmount > 0) {
             _perpetual.withdrawFor(msg.sender, withdrawAmount);
         }
-    }
-
-    // It's safe if perpetual.positionSize == tp.totalSupply. Otherwise the Tokenizer is dangerous.
-    modifier positionMustBeConsistent() {
-        address makerAddress = address(this);
-        LibTypes.MarginAccount memory maker = _perpetual.getMarginAccount(makerAddress);
-        require (totalSupply() == maker.size, "position must be consistent");
-
-        _;
     }
 
     /**

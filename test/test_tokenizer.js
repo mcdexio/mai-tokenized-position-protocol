@@ -81,7 +81,7 @@ contract('tokenizer', accounts => {
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), '14000');
-            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.totalSupply()), 0);
@@ -131,7 +131,7 @@ contract('tokenizer', accounts => {
             // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), '0');
-            assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
             assert.equal(fromWad(await tokenizer.balanceOf(tokenizer.address)), 0);
             assert.equal(fromWad(await tokenizer.totalSupply()), 0);
@@ -244,9 +244,9 @@ contract('tokenizer', accounts => {
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69 * 2, '0.1');
 
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
-            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 7033.69 + 1.30 /* mint diff */, '0.1');
-            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 7033.69, '0.1');
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 7033.69 + 1.30 /* mint diff */ - 1.30 /* short pnl */, '0.1');
+            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 7033.69, '0.1');
+            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 7035, '0.1');
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 7033.69, '0.1');
           
             await tokenizer.redeem(toWad(1), { from: u3 });
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 7033.69, '0.1');
@@ -278,9 +278,9 @@ contract('tokenizer', accounts => {
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30 * 2, '0.1');
         
             // await inspect(u3, perp.perpetual, perp.proxy, perp.amm);
-            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 6966.30 - 1.3 /* mint diff */, '0.1');
-            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 6966.30, '0.1');
-            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 6966.30 - 1.3 /* mint diff */ + 1.3 /* short pnl */, '0.1');
+            assertApproximate(assert, fromWad(await perp.cashBalanceOf(u3)), 7000 * 2 - 6966.30, '0.1');
+            assertApproximate(assert, fromWad(await perp.positionEntryValue(u3)), 6965, '0.1');
+            assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u3)), 7000 * 2 - 6966.30, '0.1');
 
             await tokenizer.redeem(toWad(1), { from: u3 });
             assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 6966.30, '0.1');

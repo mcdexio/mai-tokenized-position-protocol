@@ -123,14 +123,14 @@ contract('emergency', accounts => {
         assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 
-    it("position (> 0) inconsistent - failed", async () => {
+    it("position (> 0) inconsistent - can transfer and redeem, the others failed", async () => {
         await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
         await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
         await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-        await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
-        await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 73);
         
         // make tp unsafe
+        await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+        await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 73);
         assert.ok(!(await perp.perpetual.isSafe.call(tokenizer.address)));
         assert.ok(!(await perp.perpetual.isBankrupt.call(tokenizer.address)));
         await perp.perpetual.liquidate(tokenizer.address, toWad(7000), { from: u1 })
@@ -149,12 +149,6 @@ contract('emergency', accounts => {
             assert.ok(error.message.includes("consistent"), error);
         }
         try {
-            await tokenizer.redeem(toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("consistent"), error);
-        }
-        try {
             await tokenizer.settle({ from: u2 });
             throw null;
         } catch (error) {
@@ -164,16 +158,40 @@ contract('emergency', accounts => {
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.approve(u2, infinity, { from: u2 });
         await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
+        await tokenizer.approve(u3, infinity, { from: u3 });
+        await tokenizer.transferFrom(u3, u2, toWad(1), { from: u3 });
+
+        // redeem is ok
+        // at this moment, 1 TP = $703.5, markPrice = 7035
+        // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+        // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+        assertApproximate(assert, fromWad(await perp.cashBalanceOf(u2)), 7000, '0.1');
+        assertApproximate(assert, fromWad(await perp.positionSize(u2)), 1, '0.1');
+        assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 + 6863.49, '0.1');
+        assertApproximate(assert, fromWad(await perp.cashBalanceOf(tokenizer.address)), 790.63, '0.1');
+        assertApproximate(assert, fromWad(await perp.positionSize(tokenizer.address)), 0.104, '0.1');
+        assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 73.505, '0.1');
+        
+        await tokenizer.redeem(toWad(1), { from: u2 });
+
+        // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+        // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
+        assertApproximate(assert, fromWad(await perp.cashBalanceOf(u2)), 7000 + 790.63, '0.1');
+        assertApproximate(assert, fromWad(await perp.positionSize(u2)), 1 - 0.104, '0.1');
+        assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(u2)), 7000 + 6863.49 + 73.505, '0.1');
+        assertApproximate(assert, fromWad(await perp.cashBalanceOf(tokenizer.address)), 0, '0.1');
+        assertApproximate(assert, fromWad(await perp.positionSize(tokenizer.address)), 0, '0.1');
+        assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0, '0.1');
     });
 
-    it("position (= 0) inconsistent - failed", async () => {
+    it("position (= 0) inconsistent - can transfer, the others failed", async () => {
         await perp.amm.setGovernanceParameter(toBytes32("poolFeeRate"), 0);
         await perp.amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), 0);
         await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-        await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
-        await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 75);
         
         // make tp unsafe
+        await perp.amm.buy(toWad(0.1), infinity, infinity, { from: u1 });
+        await perp.amm.setBlockTimestamp((await perp.amm.mockBlockTimestamp()).toNumber() + 86400 * 75);
         assert.ok(!(await perp.perpetual.isSafe.call(tokenizer.address)));
         assert.ok(await perp.perpetual.isBankrupt.call(tokenizer.address));
         await perp.perpetual.liquidate(tokenizer.address, toWad(7000), { from: u1 })
@@ -194,7 +212,7 @@ contract('emergency', accounts => {
             await tokenizer.redeem(toWad(1), { from: u2 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("consistent"), error);
+            assert.ok(error.message.includes("zero margin balance"), error);
         }
         try {
             await tokenizer.settle({ from: u2 });
@@ -206,6 +224,8 @@ contract('emergency', accounts => {
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.approve(u2, infinity, { from: u2 });
         await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
+        await tokenizer.approve(u3, infinity, { from: u3 });
+        await tokenizer.transferFrom(u3, u2, toWad(1), { from: u3 });
     });
 
     it("tp pause", async () => {
@@ -240,7 +260,7 @@ contract('emergency', accounts => {
             await tokenizer.settle({ from: u2 });
             throw null;
         } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
+            assert.ok(error.message.includes(": paused"), error);
         }
     });
 
@@ -263,6 +283,6 @@ contract('emergency', accounts => {
         } catch (error) {
             assert.ok(error.message.includes("wrong perpetual status"), error);
         }
-        assert.equal(fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
+        assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 });

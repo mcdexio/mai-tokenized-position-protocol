@@ -14,12 +14,23 @@ library LibTypes {
         int256 entryFundingLoss;
         int256 cashBalance;
     }
+    struct PerpGovernanceConfig {
+        uint256 initialMarginRate;
+        uint256 maintenanceMarginRate;
+        uint256 liquidationPenaltyRate;
+        uint256 penaltyFundRate;
+        int256 takerDevFeeRate;
+        int256 makerDevFeeRate;
+        uint256 lotSize;
+        uint256 tradingLotSize;
+    }
 }
 
 // see https://github.com/mcdexio/mai-protocol-v2/blob/master/contracts/interface/IPerpetual.sol
 interface IPerpetual {
     function collateral() external view returns (address);
     function globalConfig() external view returns (address);
+    function getGovernance() external view returns (LibTypes.PerpGovernanceConfig memory);
     function getMarginAccount(address trader) external view returns (LibTypes.MarginAccount memory);
     function markPrice() external returns (uint256);
     function status() external view returns (LibTypes.Status);
