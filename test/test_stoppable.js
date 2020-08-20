@@ -32,9 +32,17 @@ contract('stoppable', accounts => {
         assert.ok(!(await stoppable.drasticMeasureTaken()));
     });
 
+    it('not stopped', async function () {
+        assert.ok(!(await stoppable.stopped()));
+    });
+
     context('when stopped', function () {
         beforeEach(async function () {
             await stoppable.stop();
+        });
+
+        it('stopped', async function () {
+            assert.ok(await stoppable.stopped());
         });
 
         it('cannot perform normal process in stop', async function () {
