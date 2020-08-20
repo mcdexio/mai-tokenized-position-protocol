@@ -1,6 +1,6 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
-const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
+const { shouldThrows, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
 const { toWad, fromWad, infinity } = require('./constants');
 const { inspect, printFunding } = require('./funcs')
 const { typicalPerp } = require('./perp.js')
@@ -62,24 +62,9 @@ contract('emergency', accounts => {
         await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
         
         await perp.perpetual.beginGlobalSettlement(toWad(7000));
-        try {
-            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
-        try {
-            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
-        try {
-            await tokenizer.settle({ from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
+        await shouldThrows(tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 }), "wrong perpetual status");
+        await shouldThrows(tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 }), "wrong perpetual status");
+        await shouldThrows(tokenizer.settle({ from: u2 }), "wrong perpetual status");
         await tokenizer.transfer(u3, toWad(1), { from: u2 });
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.approve(u2, infinity, { from: u2 });
@@ -91,18 +76,8 @@ contract('emergency', accounts => {
         await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u3 });
         await perp.perpetual.beginGlobalSettlement(toWad(7000));
         await perp.perpetual.endGlobalSettlement();
-        try {
-            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
-        try {
-            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
+        await shouldThrows(tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 }), "wrong perpetual status");
+        await shouldThrows(tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 }), "wrong perpetual status");
         await tokenizer.settle({ from: u2 });
         await tokenizer.settle({ from: u3 });
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 1 /* short pos is not settled yet */)
@@ -142,18 +117,8 @@ contract('emergency', accounts => {
         // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
         // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
 
-        try {
-            await tokenizer.mint(toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("consistent"), error);
-        }
-        try {
-            await tokenizer.settle({ from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
+        await shouldThrows(tokenizer.mint(toWad(1), { from: u2 }), "consistent");
+        await shouldThrows(tokenizer.settle({ from: u2 }), "wrong perpetual status");
         await tokenizer.transfer(u3, toWad(1), { from: u2 });
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.approve(u2, infinity, { from: u2 });
@@ -202,24 +167,9 @@ contract('emergency', accounts => {
         // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
         // await inspect(tokenizer.address, perp.perpetual, perp.proxy, perp.amm);
         
-        try {
-            await tokenizer.mint(toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("consistent"), error);
-        }
-        try {
-            await tokenizer.redeem(toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("zero margin balance"), error);
-        }
-        try {
-            await tokenizer.settle({ from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
+        await shouldThrows(tokenizer.mint(toWad(1), { from: u2 }), "consistent");
+        await shouldThrows(tokenizer.redeem(toWad(1), { from: u2 }), "zero margin balance");
+        await shouldThrows(tokenizer.settle({ from: u2 }), "wrong perpetual status");
         await tokenizer.transfer(u3, toWad(1), { from: u2 });
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.approve(u2, infinity, { from: u2 });
@@ -235,37 +185,12 @@ contract('emergency', accounts => {
         });
 
         it('paused', async function () {
-            try {
-                await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes(": paused"), error);
-            }
-            try {
-                await tokenizer.redeem(toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes(": paused"), error);
-            }
-            try {
-                await tokenizer.transfer(u3, toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes(": paused"), error);
-            }
+            await shouldThrows(tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 }), ": paused");
+            await shouldThrows(tokenizer.redeem(toWad(1), { from: u2 }), ": paused");
+            await shouldThrows(tokenizer.transfer(u3, toWad(1), { from: u2 }), ": paused");
             await tokenizer.approve(u2, infinity, { from: u2 });
-            try {
-                await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes(": paused"), error);
-            }
-            try {
-                await tokenizer.settle({ from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes(": paused"), error);
-            }
+            await shouldThrows(tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 }), ": paused");
+            await shouldThrows(tokenizer.settle({ from: u2 }), ": paused");
         });
 
         it('unpause', async function () {
@@ -274,12 +199,7 @@ contract('emergency', accounts => {
             await tokenizer.transfer(u3, toWad(1), { from: u2 });
             await tokenizer.approve(u3, infinity, { from: u3 });
             await tokenizer.transferFrom(u3, u2, toWad(1), { from: u3 });
-            try {
-                await tokenizer.settle({ from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("wrong perpetual status"), error);
-            }
+            await shouldThrows(tokenizer.settle({ from: u2 }), "wrong perpetual status");
             await tokenizer.redeem(toWad(1), { from: u2 });
             await tokenizer.mint(toWad(1), { from: u2 });
         });
@@ -288,22 +208,12 @@ contract('emergency', accounts => {
     it("tp shutdown", async () => {
         await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
         await tokenizer.shutdown();
-        try {
-            await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": stopped"), error);
-        }
+        await shouldThrows(tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 }), ": stopped");
         await tokenizer.approve(u2, infinity, { from: u2 });
         await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
         await tokenizer.transfer(u2, toWad(1), { from: u3 });
         await tokenizer.redeem(toWad(1), { from: u2 });
-        try {
-            await tokenizer.settle({ from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("wrong perpetual status"), error);
-        }
+        await shouldThrows(tokenizer.settle({ from: u2 }), "wrong perpetual status");
         assertApproximate(assert, fromWad(await perp.perpetual.marginBalance.call(tokenizer.address)), 0);
     });
 });

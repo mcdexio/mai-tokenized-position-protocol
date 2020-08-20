@@ -1,6 +1,5 @@
 const assert = require('assert');
-const BigNumber = require('bignumber.js');
-const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
+const { shouldThrows, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
 const { toWad, fromWad, infinity } = require('./constants');
 const { inspect, printFunding } = require('./funcs')
 const { typicalPerp } = require('./perp.js')
@@ -49,46 +48,11 @@ contract('governance', accounts => {
     });
 
     it("only owner", async () => {
-        try {
-            await tokenizer.setDevAddress(u1, { from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("not owner"), error);
-        }
-
-        try {
-            await tokenizer.setMintFeeRate(toWad("0.01"), { from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("not owner"), error);
-        }
-
-        try {
-            await tokenizer.pause({ from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("unauthorized"), error);
-        }
-
-        try {
-            await tokenizer.unpause({ from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("unauthorized"), error);
-        }
-
-        try {
-            await tokenizer.shutdown({ from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("not owner"), error);
-        }
-
-        try {
-            await tokenizer.setCap(toWad(1), { from: u1 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("not owner"), error);
-        }
-    })
+        await shouldThrows(tokenizer.setDevAddress(u1, { from: u1 }), "not owner");
+        await shouldThrows(tokenizer.setMintFeeRate(toWad("0.01"), { from: u1 }), "not owner");
+        await shouldThrows(tokenizer.pause({ from: u1 }), "unauthorized");
+        await shouldThrows(tokenizer.unpause({ from: u1 }), "unauthorized");
+        await shouldThrows(tokenizer.shutdown({ from: u1 }), "not owner");
+        await shouldThrows(tokenizer.setCap(toWad(1), { from: u1 }), "not owner");
+    });
 });
