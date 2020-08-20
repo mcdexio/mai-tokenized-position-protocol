@@ -228,40 +228,61 @@ contract('emergency', accounts => {
         await tokenizer.transferFrom(u3, u2, toWad(1), { from: u3 });
     });
 
-    it("tp pause", async () => {
-        await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-        await tokenizer.pause();
-        try {
+    context('tp pause', function () {
+        beforeEach(async function () {
             await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": paused"), error);
-        }
-        try {
-            await tokenizer.redeem(toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": paused"), error);
-        }
-        try {
+            await tokenizer.pause();
+        });
+
+        it('paused', async function () {
+            try {
+                await tokenizer.depositAndMint(toWad(7000 * 2), toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes(": paused"), error);
+            }
+            try {
+                await tokenizer.redeem(toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes(": paused"), error);
+            }
+            try {
+                await tokenizer.transfer(u3, toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes(": paused"), error);
+            }
+            await tokenizer.approve(u2, infinity, { from: u2 });
+            try {
+                await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes(": paused"), error);
+            }
+            try {
+                await tokenizer.settle({ from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes(": paused"), error);
+            }
+        });
+
+        it('unpause', async function () {
+            await tokenizer.unpause();
+            await tokenizer.approve(u2, infinity, { from: u2 });
             await tokenizer.transfer(u3, toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": paused"), error);
-        }
-        await tokenizer.approve(u2, infinity, { from: u2 });
-        try {
-            await tokenizer.transferFrom(u2, u3, toWad(1), { from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": paused"), error);
-        }
-        try {
-            await tokenizer.settle({ from: u2 });
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes(": paused"), error);
-        }
+            await tokenizer.approve(u3, infinity, { from: u3 });
+            await tokenizer.transferFrom(u3, u2, toWad(1), { from: u3 });
+            try {
+                await tokenizer.settle({ from: u2 });
+                throw null;
+            } catch (error) {
+                assert.ok(error.message.includes("wrong perpetual status"), error);
+            }
+            await tokenizer.redeem(toWad(1), { from: u2 });
+            await tokenizer.mint(toWad(1), { from: u2 });
+        });
     });
 
     it("tp shutdown", async () => {
