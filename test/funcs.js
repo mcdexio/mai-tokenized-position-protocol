@@ -236,6 +236,15 @@ const printFunding = async (amm, perpetual) => {
     console.log("");
 };
 
+const shouldThrows = async (fn, msg) => {
+    try {
+        await fn;
+        throw new AssertionError("should throw expected msg but actually not");
+    } catch (e) {
+        assert.ok(e.message.includes(msg), "expect: [ " + msg + " ], got: [ " + e.message + " ]");
+    }
+};
+
 module.exports = {
     log,
     toBytes32,
@@ -254,5 +263,6 @@ module.exports = {
     assertApproximate,
     sleep,
     inspect,
-    printFunding
+    printFunding,
+    shouldThrows
 };

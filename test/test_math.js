@@ -1,8 +1,7 @@
 const assert = require('assert');
-const BigNumber = require('bignumber.js');
 const TestUnsignedMath = artifacts.require('TestPerpetualMathUnsigned');
-const { toWei, fromWei, toWad, fromWad, infinity, Side } = require('./constants');
-const { assertApproximate } = require('./funcs');
+const { toWad, fromWad } = require('./constants');
+const { shouldThrows } = require('./funcs');
 
 contract('LibPerpetualMathUnsigned', accounts => {
 
@@ -70,11 +69,7 @@ contract('LibPerpetualMathUnsigned', accounts => {
     });
 
     it("unsigned wdiv - div by 0", async () => {
-        try {
-            await testUnsignedMath.wdiv(toWad(1), toWad(0));
-            assert.fail('div by 0');
-        } catch {
-        }
+        await shouldThrows(testUnsignedMath.wdiv(toWad(1), toWad(0)), "invalid opcode");
     });
 
     it("unsigned wdiv - rounding", async () => {
