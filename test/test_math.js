@@ -46,12 +46,8 @@ contract('LibPerpetualMathUnsigned', accounts => {
     });
 
     it("unsigned wmul - overflow", async () => {
-        try {
-            // 2**128 * 2**128
-            await testUnsignedMath.wmul('340282366920938463463374607431768211456', '340282366920938463463374607431768211456');
-            assert.fail('should overflow');
-        } catch {
-        }
+        // 2**128 * 2**128
+        await shouldThrows(testUnsignedMath.wmul('340282366920938463463374607431768211456', '340282366920938463463374607431768211456'), 'overflow');
     });
 
     it("unsigned wmul - rounding", async () => {

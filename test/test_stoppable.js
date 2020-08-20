@@ -1,6 +1,5 @@
 const assert = require('assert');
-const BigNumber = require('bignumber.js');
-const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
+const { shouldThrows, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
 const Stoppable = artifacts.require('TestStoppable.sol');
 
 contract('stoppable', accounts => {
@@ -23,12 +22,7 @@ contract('stoppable', accounts => {
     });
 
     it('cannot take drastic measure in non-stop', async function () {
-        try {
-            await stoppable.drasticMeasure();
-            throw null;
-        } catch (error) {
-            assert.ok(error.message.includes("Stoppable: not stopped"), error);
-        }
+        await shouldThrows(stoppable.drasticMeasure(), "Stoppable: not stopped");
         assert.ok(!(await stoppable.drasticMeasureTaken()));
     });
 
@@ -46,12 +40,7 @@ contract('stoppable', accounts => {
         });
 
         it('cannot perform normal process in stop', async function () {
-            try {
-                await stoppable.normalProcess();
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("Stoppable: stopped"), error);
-            }
+            await shouldThrows(stoppable.normalProcess(), "Stoppable: stopped");
         });
 
         it('can take a drastic measure in a stop', async function () {
@@ -60,12 +49,7 @@ contract('stoppable', accounts => {
         });
 
         it('reverts when re-stop', async function () {
-            try {
-                await stoppable.normalProcess();
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("Stoppable: stopped"), error);
-            }
+            await shouldThrows(stoppable.stop(), "Stoppable: stopped");
         });
     });
 });

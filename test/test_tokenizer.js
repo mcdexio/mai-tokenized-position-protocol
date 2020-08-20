@@ -1,6 +1,6 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
-const { increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
+const { shouldThrows, increaseEvmBlock, increaseEvmTime, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
 const { toWad, fromWad, infinity, Side } = require('./constants');
 const { inspect, printFunding } = require('./funcs')
 const { typicalPerp } = require('./perp.js')
@@ -98,14 +98,26 @@ contract('tokenizer', accounts => {
         });
 
         it("mint without deposit - failed", async () => {
-            try {
-                await tokenizer.mint(toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("unsafe"), error);
-            }
-
+            await shouldThrows(tokenizer.mint(toWad(1), { from: u2 }), 'unsafe');
             assert.equal(fromWad(await tokenizer.balanceOf(u2)), 0);
+        });
+
+        it("mint while close position - success", async () => {
+            await perp.perpetual.deposit(toWad(7000 * 2), { from: u2 });
+            await perp.amm.buy(toWad(0.5), infinity, infinity, { from: u2 });
+            await tokenizer.mint(toWad(0.5), { from: u2 });
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            assert.equal(fromWad(await tokenizer.balanceOf(u2)), '0.5');
+            assert.equal(fromWad(await perp.positionSize(u2)), '0');
+        });
+
+        it("mint while partially close unsafe position - failed", async () => {
+            await perp.perpetual.deposit(toWad(7000), { from: u2 });
+            await perp.amm.buy(toWad(0.5), infinity, infinity, { from: u2 });
+            await perp.setIndexPrice(6500);
+            // await inspect(u2, perp.perpetual, perp.proxy, perp.amm);
+            await shouldThrows(tokenizer.mint(toWad(0.5), { from: u2 }), 'taker unsafe');
+                    
         });
 
         it("composite mint + redeem - success", async () => {
@@ -294,15 +306,12 @@ contract('tokenizer', accounts => {
             await perp.collateral.approve(perp.perpetual.address, infinity, { from: u2 });
             await perp.collateral.mint(u2, toWad(7000 * 2 * 1000000 + 7000 * 2 * 1));
             await tokenizer.depositAndMint(toWad(7000 * 2 * 1000000), toWad(1000000), { from: u2 });
-            try {
-                await tokenizer.depositAndMint(toWad(7000 * 2 * 1), '1', { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("cap"), error);
-            }
+            await shouldThrows(tokenizer.depositAndMint(toWad(7000 * 2 * 1), '1', { from: u2 }), "cap");
 
             // change cap
-            await tokenizer.setCap(toWad(1000001));
+            assert.equal(fromWad(await tokenizer.cap()), '1000000');
+            await tokenizer.setCap(toWad('1000001'));
+            assert.equal(fromWad(await tokenizer.cap()), '1000001');
             await tokenizer.depositAndMint(toWad(7000 * 2 * 1), '1', { from: u2 });
         });
     });

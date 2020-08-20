@@ -15,18 +15,6 @@ const fromBytes32 = b => {
 
 const clone = x => JSON.parse(JSON.stringify(x));
 
-const shouldFailOnError = async (message, func) => {
-    try {
-        await func();
-    } catch (error) {
-        assert.ok(
-            error.message.includes(message),
-            `exception should include "${message}", but get "${error.message}"`);
-        return;
-    }
-    assert.fail(`should fail with "${message}"`);
-};
-
 const call = async (user, method) => {
     return await method.call();
 };
@@ -236,13 +224,14 @@ const printFunding = async (amm, perpetual) => {
     console.log("");
 };
 
-const shouldThrows = async (fn, msg) => {
+const shouldThrows = async (fn, message) => {
     try {
         await fn;
-        throw new AssertionError("should throw expected msg but actually not");
-    } catch (e) {
-        assert.ok(e.message.includes(msg), "expect: [ " + msg + " ], got: [ " + e.message + " ]");
+    } catch (error) {
+        assert.ok(error.message.includes(message), `exception should include "${message}", but get "${error.message}"`);
+        return;
     }
+    assert.fail(`should fail with "${message}"`);
 };
 
 module.exports = {
@@ -250,7 +239,6 @@ module.exports = {
     toBytes32,
     fromBytes32,
     clone,
-    shouldFailOnError,
     call,
     send,
     initializeToken,
