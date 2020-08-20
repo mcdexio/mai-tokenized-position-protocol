@@ -9,10 +9,11 @@ contract Stoppable is Initializable {
 
     bool private _stopped;
 
-    /**
-     * @dev Initializes the contract in unpaused state.
-     */
     function __Stoppable_init() internal initializer {
+        __Stoppable_init_unchained();
+    }
+
+    function __Stoppable_init_unchained() internal initializer {
         _stopped = false;
     }
 

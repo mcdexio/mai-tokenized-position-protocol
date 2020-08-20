@@ -3,6 +3,7 @@ pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2; // to enable structure-type parameter
 
 import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
@@ -15,6 +16,7 @@ import "./TokenizerGovernance.sol";
 
 contract TokenizerImplV1 is
     Initializable,
+    ContextUpgradeSafe,
     TokenizerStorage,
     TokenizerGovernance,
     ITokenizer
@@ -40,10 +42,25 @@ contract TokenizerImplV1 is
         external
         initializer
     {
-        __Pausable_init();
-        __Stoppable_init();
-        __ERC20_init(name, symbol);
-        __ERC20Capped_init(cap);
+        __TokenizerImplV1_init(name, symbol, perpetual, collateralDecimals, devAddress, cap);
+    }
+
+    function __TokenizerImplV1_init(
+        string calldata name,
+        string calldata symbol,
+        address perpetual,
+        uint256 collateralDecimals,
+        address devAddress,
+        uint256 cap
+    )   
+        internal
+        initializer
+    {
+        __Context_init_unchained();
+        __Pausable_init_unchained();
+        __Stoppable_init_unchained();
+        __ERC20_init_unchained(name, symbol);
+        __ERC20Capped_init_unchained(cap);
 
         _perpetual = IPerpetual(perpetual);
         // this statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
@@ -53,6 +70,7 @@ contract TokenizerImplV1 is
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
         _devAddress = devAddress;
     }
+
 
     /**
      * @dev Mint some Tokenized Positions (tp) and get short positions in the margin account.
