@@ -187,7 +187,8 @@ contract('tokenizer', accounts => {
             assert.equal(await perp.positionSide(u3), Side.SHORT);
             assert.equal(await perp.positionSide(tokenizer.address), Side.LONG);
 
-            await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u3 });
+            await tokenizer.redeem(toWad(1), { from: u3 });
+            await perp.perpetual.withdraw(toWad('13999.9999999999999999'), { from: u3 });
             await tokenizer.redeemAndWithdraw(toWad(1), toWad('13999.9999999999999999'), { from: u2 });
 
             assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), '69999.9999999999999999')

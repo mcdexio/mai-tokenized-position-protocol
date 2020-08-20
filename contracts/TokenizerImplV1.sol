@@ -306,4 +306,8 @@ contract TokenizerImplV1 is
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
     }
+
+    receive() payable external {
+        require(msg.sender == address(_perpetual), "Only perpetual");
+    }
 }
