@@ -1,0 +1,24 @@
+{
+  "manifestVersion": "2.2",
+  "contracts": {
+    "TokenizerImplV1": "TokenizerImplV1"
+  },
+  "dependencies": {},
+  "name": "TokenizedPosition",
+  "version": "1.0.0",
+  "compiler": {
+    "compilerSettings": {
+      "optimizer": {
+        "enabled": false,
+        "runs": "200"
+      }
+    },
+    "typechain": {
+      "enabled": false
+    },
+    "manager": "truffle",
+    "artifactsDir": "build/contracts",
+    "contractsDir": "contracts"
+  },
+  "telemetryOptIn": false
+}

@@ -78,11 +78,6 @@ contract TokenizerGovernance is
     }
 
     /**
-     * @dev Get cap
-     */
-    function getCap() external view returns (uint256) { return _cap; }
-
-    /**
      * @dev Sets the value of the `cap`. This value is immutable, it can only be
      * set once during construction.
      */

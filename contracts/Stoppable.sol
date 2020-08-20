@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
 
-contract Stoppable {
+import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
+
+contract Stoppable is Initializable {
 
     event Stopped(address indexed caller);
 
     bool private _stopped;
 
-    constructor() internal {
+    /**
+     * @dev Initializes the contract in unpaused state.
+     */
+    function __Stoppable_init() internal initializer {
         _stopped = false;
     }
 

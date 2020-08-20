@@ -2,24 +2,22 @@
 pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2; // to enable structure-type parameter
 
-import "@openzeppelin/contracts/utils/SafeCast.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/SafeCast.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 
+import "./ITokenizer.sol";
 import "./LibPerpetualMath.sol";
 import "./TokenizerStorage.sol";
 import "./TokenizerGovernance.sol";
-import "./ERC20Capped.sol";
-import "./ITokenizer.sol";
 
 contract TokenizerImplV1 is
+    Initializable,
     TokenizerStorage,
-    ERC20Capped,
     TokenizerGovernance,
-    ITokenizer,
-    Initializable
+    ITokenizer
 {
     using LibPerpetualMathUnsigned for uint256;
     using SafeCast for int256;
@@ -42,8 +40,11 @@ contract TokenizerImplV1 is
         external
         initializer
     {
-        _name = name;
-        _symbol = symbol;
+        __Pausable_init();
+        __Stoppable_init();
+        __ERC20_init(name, symbol);
+        __ERC20Capped_init(cap);
+
         _perpetual = IPerpetual(perpetual);
         // this statement will cause a 'InternalCompilerError: Assembly exception for bytecode'
         // scaler = (_decimals == MAX_DECIMALS ? 1 : 10**(MAX_DECIMALS.sub(_decimals))).toInt256();
@@ -51,7 +52,6 @@ contract TokenizerImplV1 is
         require(collateralDecimals <= MAX_DECIMALS, "decimals out of range");
         _collateralScaler = 10**(MAX_DECIMALS - collateralDecimals);
         _devAddress = devAddress;
-        _cap = cap;
     }
 
     /**
@@ -115,7 +115,7 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // mint
-        ERC20._mint(takerAddress, tpAmount);
+        ERC20UpgradeSafe._mint(takerAddress, tpAmount);
         emit Mint(takerAddress, tpAmount);
     }
 
@@ -181,7 +181,7 @@ contract TokenizerImplV1 is
         require(_perpetual.isSafe(makerAddress), "broker unsafe");
 
         // burn
-        ERC20._burn(takerAddress, tpAmount);
+        ERC20UpgradeSafe._burn(takerAddress, tpAmount);
         emit Burn(takerAddress, tpAmount);
     }
 
@@ -225,7 +225,7 @@ contract TokenizerImplV1 is
         }
 
         // burn
-        ERC20._burn(takerAddress, tpAmount);
+        ERC20UpgradeSafe._burn(takerAddress, tpAmount);
         emit Burn(takerAddress, tpAmount);
     }
 

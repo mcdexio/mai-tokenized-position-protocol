@@ -1,13 +1,36 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.6.10;
+pragma solidity ^0.6.0;
 
-import "./ERC20.sol";
-import "./TokenizerStorage.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol";
 
 /**
- * @dev Extension of {ERC20} that adds a cap to the supply of tokens.
+ * @dev Almost the same as @openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Capped.sol
+ *      except that we can modify the cap.
  */
-contract ERC20Capped is TokenizerStorage, ERC20 {
+abstract contract ERC20CappedUpgradeSafe is Initializable, ERC20UpgradeSafe {
+    uint256 internal _cap;
+
+    /**
+     * @dev Sets the value of the `cap`. This value is immutable, it can only be
+     * set once during construction.
+     */
+    function __ERC20Capped_init(uint256 cap) internal initializer {
+        __Context_init_unchained();
+        __ERC20Capped_init_unchained(cap);
+    }
+
+    function __ERC20Capped_init_unchained(uint256 cap) internal initializer {
+        require(cap > 0, "ERC20Capped: cap is 0");
+        _cap = cap;
+    }
+
+    /**
+     * @dev Returns the cap on the token's total supply.
+     */
+    function cap() public view returns (uint256) {
+        return _cap;
+    }
+
     /**
      * @dev See {ERC20-_beforeTokenTransfer}.
      *
@@ -22,4 +45,6 @@ contract ERC20Capped is TokenizerStorage, ERC20 {
             require(totalSupply().add(amount) <= _cap, "ERC20Capped: cap exceeded");
         }
     }
+
+    uint256[49] private __gap;
 }
