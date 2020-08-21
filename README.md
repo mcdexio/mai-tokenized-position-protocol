@@ -13,4 +13,4 @@ Check our [documents](https://github.com/mcdexio/documents) to get more informat
 
 ## Contracts
 
-This project is still developing.
+The project is still under development.
