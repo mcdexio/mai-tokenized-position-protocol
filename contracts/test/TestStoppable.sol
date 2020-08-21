@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.10;
 
-import "../Stoppable.sol";
+import "../libs/Stoppable.sol";
 
 contract TestStoppable is
     Stoppable

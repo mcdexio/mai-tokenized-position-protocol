@@ -82,7 +82,6 @@ contract TokenizerGovernance is
      * set once during construction.
      */
     function setCap(uint256 cap) external onlyAdministrator {
-        require(cap > 0, "ERC20Capped: cap is 0");
-        _cap = cap;
+        _setCap(cap);
     }
 }

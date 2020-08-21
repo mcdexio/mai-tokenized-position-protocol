@@ -4,9 +4,9 @@ pragma experimental ABIEncoderV2; // to enable structure-type parameter
 
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/Pausable.sol";
 
-import "./IPerpetual.sol";
-import "./Stoppable.sol";
-import "./ERC20Capped.sol";
+import "./libs/IPerpetual.sol";
+import "./libs/Stoppable.sol";
+import "./libs/ERC20Capped.sol";
 
 // Tokenizer storage
 contract TokenizerStorage is
@@ -24,5 +24,5 @@ contract TokenizerStorage is
     uint256 internal _mintFeeRate;
     address internal _devAddress;
 
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 }

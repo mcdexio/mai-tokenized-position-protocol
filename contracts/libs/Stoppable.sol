@@ -4,14 +4,9 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
 
 contract Stoppable is Initializable {
-
     event Stopped(address indexed caller);
 
     bool private _stopped;
-
-    function __Stoppable_init() internal initializer {
-        __Stoppable_init_unchained();
-    }
 
     function __Stoppable_init_unchained() internal initializer {
         _stopped = false;
@@ -59,4 +54,6 @@ contract Stoppable is Initializable {
         _stopped = true;
         emit Stopped(msg.sender);
     }
+    
+    uint256[49] private __gap;
 }

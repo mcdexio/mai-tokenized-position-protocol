@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.10;
 
-import {LibPerpetualMathUnsigned} from "../LibPerpetualMath.sol";
+import {LibPerpetualMathUnsigned} from "../libs/LibPerpetualMath.sol";
 
 contract TestPerpetualMathUnsigned {
     using LibPerpetualMathUnsigned for uint256;
