@@ -71,7 +71,6 @@ contract TokenizerImplV1 is
         _devAddress = devAddress;
     }
 
-
     /**
      * @dev Mint some Tokenized Positions (tp) and get short positions in the margin account.
      * 

@@ -69,11 +69,7 @@ contract TokenizerGovernance is
     /**
      * @dev Shutdown the Tokenizer. Only call by admin.
      */
-    function shutdown()
-        external
-        whenNotStopped
-        onlyAdministrator
-    {
+    function shutdown() external onlyAdministrator {
         _stop();
     }
 

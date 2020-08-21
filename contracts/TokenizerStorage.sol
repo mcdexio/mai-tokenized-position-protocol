@@ -15,10 +15,10 @@ contract TokenizerStorage is
     ERC20CappedUpgradeSafe
  {
     // Perpetual context
-    IPerpetual internal _perpetual;
+    IPerpetual internal _perpetual; // immutable
 
     // Scaler helps to convert decimals
-    uint256 internal _collateralScaler;
+    uint256 internal _collateralScaler; // immutable
 
     // Governance
     uint256 internal _mintFeeRate;

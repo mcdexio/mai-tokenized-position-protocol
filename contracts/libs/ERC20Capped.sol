@@ -8,11 +8,12 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol
  *      except that we can modify the cap.
  */
 abstract contract ERC20CappedUpgradeSafe is Initializable, ERC20UpgradeSafe {
+    event Cap(uint256 newCap);
+
     uint256 internal _cap;
 
     function __ERC20Capped_init_unchained(uint256 newCap) internal initializer {
-        require(newCap > 0, "ERC20Capped: cap is 0");
-        _cap = newCap;
+        _setCap(newCap);
     }
 
     /**
@@ -43,6 +44,8 @@ abstract contract ERC20CappedUpgradeSafe is Initializable, ERC20UpgradeSafe {
     function _setCap(uint256 newCap) internal virtual {
         require(newCap > 0, "ERC20Capped: cap is 0");
         _cap = newCap;
+
+        emit Cap(newCap);
     }
 
     uint256[49] private __gap;
