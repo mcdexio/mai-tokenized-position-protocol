@@ -55,4 +55,15 @@ contract('governance', accounts => {
         await shouldThrows(tokenizer.shutdown({ from: u1 }), "not owner");
         await shouldThrows(tokenizer.setCap(toWad(1), { from: u1 }), "not owner");
     });
+
+    it("reader", async () => {
+        await tokenizer.setMintFeeRate(toWad("0.01"));
+
+        const gov = await tokenizer.dumpGov();
+        assert.equal(gov[0], perp.perpetual.address);
+        assert.equal(fromWad(gov[1]), "0.01");
+        assert.equal(gov[2], dev);
+        assert.ok(!gov[3], "should not paused");
+        assert.ok(!gov[4], "should not stopped");
+    });
 });

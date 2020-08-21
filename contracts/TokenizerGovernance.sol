@@ -17,27 +17,46 @@ contract TokenizerGovernance is
     }
 
     /**
+     * @dev Get perpetual
+     */
+    function getPerpetualAddress() public view returns (address) { return address(_perpetual); }
+
+    /**
      * @dev Get mintFeeRate
      */
-    function getMintFeeRate() external view returns (uint256) { return _mintFeeRate; }
+    function getMintFeeRate() public view returns (uint256) { return _mintFeeRate; }
+
+    /**
+     * @dev Get dev
+     */
+    function getDevAddress() public view returns (address) { return _devAddress; }
+
+    // A batch reader in order to reduce calling consumption
+    function dumpGov() external view virtual returns (
+        address, address, uint256, uint256, bool, bool
+    ) {
+        return (
+            getPerpetualAddress(),
+            getDevAddress(),
+            getMintFeeRate(),
+            cap(),
+            paused(),
+            stopped()
+        );
+    }
 
     /**
      * @dev Set mintFeeRate
      */
-    function setMintFeeRate(uint256 value) external onlyAdministrator {
+    function setMintFeeRate(uint256 value) public virtual onlyAdministrator {
         _mintFeeRate = value;
         UpdateMintFeeRate(value);
     }
 
     /**
-     * @dev Get mintFeeRate
+     * @dev Set dev
      */
-    function getDevAddress() external view returns (address) { return _devAddress; }
-
-    /**
-     * @dev Set mintFeeRate
-     */
-    function setDevAddress(address value) external onlyAdministrator {
+    function setDevAddress(address value) public virtual onlyAdministrator {
         _devAddress = value;
         emit UpdateDevAddress(value);
     }
@@ -45,7 +64,7 @@ contract TokenizerGovernance is
     /**
      * @dev Pause the Tokenizer. Call by admin or pauser.
      */
-    function pause() external {
+    function pause() public virtual {
         IGlobalConfig globalConfig = IGlobalConfig(_perpetual.globalConfig());
         require(
             globalConfig.pauseControllers(msg.sender) || globalConfig.owner() == msg.sender,
@@ -57,7 +76,7 @@ contract TokenizerGovernance is
     /**
      * @dev Unpause the Tokenizer. Call by admin or pauser.
      */
-    function unpause() external {
+    function unpause() public virtual {
         IGlobalConfig globalConfig = IGlobalConfig(_perpetual.globalConfig());
         require(
             globalConfig.pauseControllers(msg.sender) || globalConfig.owner() == msg.sender,
@@ -69,7 +88,7 @@ contract TokenizerGovernance is
     /**
      * @dev Shutdown the Tokenizer. Only call by admin.
      */
-    function shutdown() external onlyAdministrator {
+    function shutdown() public virtual onlyAdministrator {
         _stop();
     }
 
@@ -77,7 +96,7 @@ contract TokenizerGovernance is
      * @dev Sets the value of the `cap`. This value is immutable, it can only be
      * set once during construction.
      */
-    function setCap(uint256 cap) external onlyAdministrator {
+    function setCap(uint256 cap) public virtual onlyAdministrator {
         _setCap(cap);
     }
 }
