@@ -1,8 +1,9 @@
 const assert = require('assert');
 const { shouldThrows, createEVMSnapshot, restoreEVMSnapshot, toBytes32, assertApproximate } = require('./funcs');
 const { toWad, fromWad, infinity } = require('./constants');
-const { inspect, printFunding } = require('./funcs')
-const { typicalPerp } = require('./perp.js')
+const { inspect, printFunding } = require('./funcs');
+const { typicalPerp } = require('./perp.js');
+const { default: BigNumber } = require('bignumber.js');
 const Tokenizer = artifacts.require('TokenizerImplV1.sol');
 
 contract('governance', accounts => {
@@ -58,12 +59,12 @@ contract('governance', accounts => {
 
     it("reader", async () => {
         await tokenizer.setMintFeeRate(toWad("0.01"));
-
         const gov = await tokenizer.dumpGov();
         assert.equal(gov[0], perp.perpetual.address);
-        assert.equal(fromWad(gov[1]), "0.01");
-        assert.equal(gov[2], dev);
-        assert.ok(!gov[3], "should not paused");
-        assert.ok(!gov[4], "should not stopped");
+        assert.equal(gov[1], dev);
+        assert.equal(fromWad(gov[2]), "0.01");
+        assert.equal(fromWad(gov[3]), "1000000");
+        assert.ok(!gov[4], "should not paused");
+        assert.ok(!gov[5], "should not stopped");
     });
 });
