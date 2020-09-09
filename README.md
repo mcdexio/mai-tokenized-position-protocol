@@ -9,8 +9,11 @@ For example: An ETH-PERP inverse perpetual is collteralized with ETH. So the sho
 
 ## Design Details
 
-Check our [documents](https://github.com/mcdexio/documents) to get more information.
+Check the "tokenized-position" part of our [documents](https://github.com/mcdexio/documents#tokenized-position) to get more information.
 
-## Contracts
+## Develop
 
-The project is still under development.
+1. Deploy a mai protocol v2 by running `truffle migrate` in that project
+2. Do not forget to create the AMM by running `truffle exec scripts/create_pool_for_test_eth.js`
+3. Deploy the TP by running `npx oz deploy -k upgradable`. When prompting init(), enter "eUSD" and 18 decimals
+4. Do not forget to add the TP into perpetual whitelist. `await perp.globalConfig.addComponent(perp.perpetual.address, tokenizer.address)`
