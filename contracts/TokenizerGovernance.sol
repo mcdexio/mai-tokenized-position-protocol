@@ -50,7 +50,7 @@ contract TokenizerGovernance is
      */
     function setMintFeeRate(uint256 value) public virtual onlyAdministrator {
         _mintFeeRate = value;
-        UpdateMintFeeRate(value);
+        emit UpdateMintFeeRate(value);
     }
 
     /**
