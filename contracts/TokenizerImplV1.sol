@@ -154,7 +154,7 @@ contract TokenizerImplV1 is
         address makerAddress = address(this);
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
         require(tpAmount > 0, "invalid tpAmount");
-       
+        
         // pricing
         uint256 markPrice = _perpetual.markPrice();
         require(markPrice > 0, "zero markPrice");
@@ -221,7 +221,7 @@ contract TokenizerImplV1 is
         address makerAddress = address(this);
         uint256 tpAmount = balanceOf(takerAddress);
         require(tpAmount > 0, "invalid tpAmount");
-        
+
         // collateral returned
         IERC20 ctk = IERC20(_perpetual.collateral());
         uint256 marginBalance;
@@ -237,6 +237,11 @@ contract TokenizerImplV1 is
         require(totalSupply() > 0, "zero supply");
         uint256 collateral = marginBalance.wfrac(tpAmount, totalSupply());
         uint256 rawCollateral = collateral.div(_collateralScaler);
+
+        // burn
+        ERC20UpgradeSafe._burn(takerAddress, tpAmount);
+        emit Burn(takerAddress, tpAmount);
+        
         if (address(ctk) != address(0)) {
             // erc20
             ctk.safeTransfer(takerAddress, rawCollateral);
@@ -244,10 +249,6 @@ contract TokenizerImplV1 is
             // eth
             Address.sendValue(takerAddress, rawCollateral);
         }
-
-        // burn
-        ERC20UpgradeSafe._burn(takerAddress, tpAmount);
-        emit Burn(takerAddress, tpAmount);
     }
 
     /**
