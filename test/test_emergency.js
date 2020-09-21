@@ -91,7 +91,7 @@ contract('emergency', accounts => {
         await tokenizer.transfer(u3, toWad(0.5), { from: u2 });
         await perp.perpetual.endGlobalSettlement();
         await tokenizer.transfer(u3, toWad(0.5), { from: u2 });
-        await tokenizer.settle({ from: u2 }); // do nothing
+        await shouldThrows(tokenizer.settle({ from: u2 }), "invalid tpAmount"); // all shares were transferred
         await tokenizer.settle({ from: u3 });
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u2)), 7000 * 10 - 7000 * 2 /* short pos is not settled yet */)
         assertApproximate(assert, fromWad(await perp.collateral.balanceOf(u3)), 7000 * 10 + 7000 * 1 /* short pos is not settled yet */)

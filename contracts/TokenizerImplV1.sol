@@ -87,6 +87,7 @@ contract TokenizerImplV1 is
         address takerAddress = msg.sender;
         address makerAddress = address(this);
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
+        require(tpAmount > 0, "invalid tpAmount");
         
         uint256 markPrice = _perpetual.markPrice();
         require(markPrice > 0, "zero markPrice");
@@ -152,7 +153,9 @@ contract TokenizerImplV1 is
         address takerAddress = msg.sender;
         address makerAddress = address(this);
         require(_perpetual.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        
+        require(tpAmount > 0, "invalid tpAmount");
+       
+        // pricing
         uint256 markPrice = _perpetual.markPrice();
         require(markPrice > 0, "zero markPrice");
         uint256 tradingPrice = markPrice;
@@ -217,6 +220,7 @@ contract TokenizerImplV1 is
         address payable takerAddress = msg.sender;
         address makerAddress = address(this);
         uint256 tpAmount = balanceOf(takerAddress);
+        require(tpAmount > 0, "invalid tpAmount");
         
         // collateral returned
         IERC20 ctk = IERC20(_perpetual.collateral());
