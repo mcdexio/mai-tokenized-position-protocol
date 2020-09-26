@@ -101,18 +101,18 @@ contract TokenizerImplV1 is
         uint256 collateral;
         if (totalSupply() == 0) {
             // DeltaCash:= MarkPrice * Amount
-            collateral = markPrice.wmul(amount);
+            collateral = markPrice.wmulCeil(amount);
         } else {
             // DeltaCash:= OldMarginBalance * Amount / PositionSize
             uint256 marginBalance = _perpetual.marginBalance(makerAddress).toUint256();
             require(marginBalance > 0, "zero margin balance");
-            collateral = marginBalance.wfrac(amount, maker.size);
+            collateral = marginBalance.wfracCeil(amount, maker.size);
         }
         collateral = collateral.add(1); // deposit a little more
         _perpetual.transferCashBalance(takerAddress, makerAddress, collateral);
 
         // fee
-        uint256 fee = collateral.wmul(_mintFeeRate);
+        uint256 fee = collateral.wmulCeil(_mintFeeRate);
         _perpetual.transferCashBalance(takerAddress, _devAddress, fee);
 
         // trade

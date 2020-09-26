@@ -52,9 +52,13 @@ contract('LibPerpetualMathUnsigned', accounts => {
 
     it("unsigned wmul - rounding", async () => {
         assert.equal((await testUnsignedMath.wmul('1', '499999999999999999')).toString(), '0');
-        assert.equal((await testUnsignedMath.wmul('1', '500000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wmul('1', '500000000000000000')).toString(), '0');
         assert.equal((await testUnsignedMath.wmul('950000000000005647', '1000000000')).toString(), '950000000');
         assert.equal((await testUnsignedMath.wmul('1000000000', '950000000000005647')).toString(), '950000000');
+        assert.equal((await testUnsignedMath.wmulCeil('1', '499999999999999999')).toString(), '1');
+        assert.equal((await testUnsignedMath.wmulCeil('1', '500000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wmulCeil('950000000000005647', '1000000000')).toString(), '950000001');
+        assert.equal((await testUnsignedMath.wmulCeil('1000000000', '950000000000005647')).toString(), '950000001');
     });
 
     it("unsigned wdiv - trivial", async () => {
@@ -70,10 +74,54 @@ contract('LibPerpetualMathUnsigned', accounts => {
 
     it("unsigned wdiv - rounding", async () => {
         assert.equal((await testUnsignedMath.wdiv('499999999999999999', '1000000000000000000000000000000000000')).toString(), '0');
-        assert.equal((await testUnsignedMath.wdiv('500000000000000000', '1000000000000000000000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdiv('500000000000000000', '1000000000000000000000000000000000000')).toString(), '0');
         assert.equal((await testUnsignedMath.wdiv(toWad(1), toWad(3))).toString(), '333333333333333333');
-        assert.equal((await testUnsignedMath.wdiv(toWad(2), toWad(3))).toString(), '666666666666666667');
+        assert.equal((await testUnsignedMath.wdiv(toWad(2), toWad(3))).toString(), '666666666666666666');
         assert.equal((await testUnsignedMath.wdiv(toWad(1), 3)).toString(), '333333333333333333333333333333333333');
-        assert.equal((await testUnsignedMath.wdiv(toWad(2), 3)).toString(), '666666666666666666666666666666666667');
+        assert.equal((await testUnsignedMath.wdiv(toWad(2), 3)).toString(), '666666666666666666666666666666666666');
+        assert.equal((await testUnsignedMath.wdivCeil('499999999999999999', '1000000000000000000000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdivCeil('500000000000000000', '1000000000000000000000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdivCeil(toWad(1), toWad(3))).toString(), '333333333333333334');
+        assert.equal((await testUnsignedMath.wdivCeil(toWad(2), toWad(3))).toString(), '666666666666666667');
+        assert.equal((await testUnsignedMath.wdivCeil(toWad(1), 3)).toString(), '333333333333333333333333333333333334');
+        assert.equal((await testUnsignedMath.wdivCeil(toWad(2), 3)).toString(), '666666666666666666666666666666666667');
+    });
+    
+    it("unsigned div ceil", async () => {
+        await shouldThrows(testUnsignedMath.divCeil(1, 0), 'ceil need m > 0');
+        assert.equal((await testUnsignedMath.divCeil('1', '2')).toString(), '1');
+        assert.equal((await testUnsignedMath.divCeil('2', '2')).toString(), '1');
+        assert.equal((await testUnsignedMath.divCeil('3', '2')).toString(), '2');
+        assert.equal((await testUnsignedMath.divCeil('115792089237316195423570985008687907853269984665640564039457584007913129639935', '1')).toString(), '115792089237316195423570985008687907853269984665640564039457584007913129639935');
+        assert.equal((await testUnsignedMath.divCeil('115792089237316195423570985008687907853269984665640564039457584007913129639935', '2')).toString(), '57896044618658097711785492504343953926634992332820282019728792003956564819968');
+    });
+    
+    it("unsigned wdiv ceil", async () => {
+        await shouldThrows(testUnsignedMath.wdivCeil(1, 0), 'ceil need m > 0');
+        assert.equal((await testUnsignedMath.wdivCeil('0', '1000000000000000000')).toString(), '0');
+        assert.equal((await testUnsignedMath.wdivCeil('1', '1000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdivCeil('999999999999999999', '1000000000000000000')).toString(), '999999999999999999');
+        assert.equal((await testUnsignedMath.wdivCeil('1000000000000000000', '1000000000000000000')).toString(), '1000000000000000000');
+        assert.equal((await testUnsignedMath.wdivCeil('1000000000000000001', '1000000000000000000')).toString(), '1000000000000000001');
+        assert.equal((await testUnsignedMath.wdivCeil('1000000000000000000', '3000000000000000000')).toString(), '333333333333333334');
+        assert.equal((await testUnsignedMath.wdivCeil('2000000000000000000', '3000000000000000000')).toString(), '666666666666666667');
+        assert.equal((await testUnsignedMath.wdivCeil('3000000000000000000', '3000000000000000000')).toString(), '1000000000000000000');
+        assert.equal((await testUnsignedMath.wdivCeil('4000000000000000000', '3000000000000000000')).toString(), '1333333333333333334');
+        assert.equal((await testUnsignedMath.wdivCeil('0', '1000000000000000000')).toString(), '0');
+        assert.equal((await testUnsignedMath.wdivCeil('1', '1000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdivCeil('2', '1000000000000000000')).toString(), '2');
+        assert.equal((await testUnsignedMath.wdivCeil('0', '10000000000000000000')).toString(), '0');
+        assert.equal((await testUnsignedMath.wdivCeil('1', '10000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wdivCeil('2', '10000000000000000000')).toString(), '1');
+    });
+
+    it("unsigned wmul ceil", async () => {
+        assert.equal((await testUnsignedMath.wmul('1', '100000000000000000')).toString(), '0');
+        assert.equal((await testUnsignedMath.wmulCeil('1', '100000000000000000')).toString(), '1');
+    });
+
+    it("unsigned wfrac ceil", async () => {
+        assert.equal((await testUnsignedMath.wfracCeil('1', '100000000000000000', '1000000000000000000')).toString(), '1');
+        assert.equal((await testUnsignedMath.wfracCeil('1', '1000000000000000000', '10000000000000000000')).toString(), '1');
     });
 });
